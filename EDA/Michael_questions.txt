@@ -28,7 +28,7 @@ IDEAS
         - whole timeseries
         - based short past window
     - Fubctional network
-    -score
+    - score
     - clique
 - y labels
     - regression
