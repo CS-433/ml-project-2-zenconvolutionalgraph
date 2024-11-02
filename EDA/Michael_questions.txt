@@ -8,6 +8,10 @@
 - why need to learn the grpah, when we can use GAT???
 - maybe take only the timepoints that have a constant label for a long time (exclude borders)??
 -is it corrct how we intiilaize node weights
+- size of the grpahs is areund 4M each one --> 4 * 13 * 30 * 300
+- do we want to validate with  
+    - crossvalidation(use all dataset)
+    - set apart a rel never seen test set
 
 
 
