@@ -1,0 +1,37 @@
+- how to interpolate between 2 timeseries.
+    - we tried nearest
+        - CON: 
+            - lose labels timepost
+            - maybe take a lebels that is very far from the correct one
+- score emo: with ghieher psotive or magnitude of z.wcore
+- can you give us some intial grpah with out connecitvyt (i.e 414 nodes)
+- why need to learn the grpah, when we can use GAT???
+- maybe take only the timepoints that have a constant label for a long time (exclude borders)??
+-is it corrct how we intiilaize node weights
+
+
+
+IDEAS
+- nodes features
+    - single fmri value
+    - frmi values in a past window, weighted with a kerner
+    - specific metric
+        - std
+        - means
+        - cov along space
+- connectivity (initial graph)
+    - FC
+        - whole timeseries
+        - based short past window
+    - Fubctional network
+    -score
+    - clique
+- y labels
+    - regression
+    - classification
+        - single class
+            - take max score
+        - multi class   
+            - take above thr (one hot encode) --> (put 1 if scores above 2std)
+- interpretation
+    - not best nodes, but best network
