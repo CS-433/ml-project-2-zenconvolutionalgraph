@@ -28,20 +28,20 @@ Usefull links:
   - window (both beofre and after, no real time prediction)
 - not know which is the correct **initial graph strucure** (fc, sc, fc window, clique, ...)
   - a **priori knowldeg (we decide)**
-    - FC of the subject, calculated with
+    - FC of the subject, edges calculated with
         - in window
         - in all movie
     - FN (14 regions always connected via clique)
         - all edges constants
         - edge clausted with window
-  - **GSL**
+    - **GSL**
       - OpenGSL
-      - still need intila one --> clique
-      - not interpretable
-  - **GAT** (model tries to learn most improtat)
+        - still need intila one --> clique
+        - not interpretable
+    - **GAT** (model tries to learn most improtat)
       - still need intioa one
       - cannot use the clique (it is a transformer)
-  - **transformer**
+    - **transformer**
       - no need for intiial grpah
     - 
 - differt emo differt time eliciting, difficult window size
@@ -57,4 +57,10 @@ Usefull links:
   -(https://github.com/usccolumbia/deeperGATGNN)
 - use GSL
   - open gsl
-  
+
+# Cross calidation
+NO --> decision made with the lab
+
+# ATTENTION how tor sploit trian and tets
+cannot do random --> maybe some timepoints in traion and tets are close --> so they are same scene of the kvoie --> so it like a little of info lackage
+Solution: use whole movirs ofr tets ste
