@@ -140,6 +140,7 @@ Solution: use whole movirs ofr tets ste
   - KNN (rith K = 50) cristinao
   - GNN (clique) Zhoufu
   - FeedForward gabriele
+  - random forest
 - other baselines
   - OpenGSL --> cristiano
   - GAT --> OK (check and imporove)

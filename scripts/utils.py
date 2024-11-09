@@ -115,7 +115,61 @@ class DatasetEmo():
         return self.graphs_list_info
 
 
+def split_train_test_vertically(df_all_movies, test_movies_dict = {"Sintel": 7, "TearsOfSteel": 10, "Superhero": 9}):
+    
+    # Extract code test movies
+    movie_names = df_all_movies.movie.unique()
+    test_movies = list(test_movies_dict.values())
+    train_movies = [movie for movie in movie_names if movie not in test_movies]
 
+    # Split the df with all movies in train and test
+    df_train = df_all_movies[df_all_movies.movie.isin(train_movies)]
+    df_test = df_all_movies[df_all_movies.movie.isin(test_movies)]
+
+    return df_train, df_test
+
+def split_train_test_horizontally(df_all_movies, percentage_test = 0.2, path_pickle_delay = "data/raw/labels/run_onsets.pkl", tr_len = 1.3):
+    
+    #Idea: I can say that one datapoint is NO in test/train set by tranforming its label in -1
+    # Indeed only timepoints that have labe != -1 will be used to create a graph and thus to be predicted
+
+    # I will split in order ot have always the final x% of the movie in the test set
+
+    # Attnetion: still info leackage on the border
+
+    #Attention: for same movie but differt subject the movie starts at differt time (but just few sec)
+    # in this case as we ar elobisn only few labels we ignore this fact in the splitting procedure
+
+    # Split the df with all movies in train and test
+    df_train = df_all_movies.copy()
+    df_test = df_all_movies.copy()
+   
+    # Load onset of different movies, for differt subejcts
+    with open("data/raw/labels/run_onsets.pkl", "rb") as file:
+        delta_time = pkl.load(file)
+
+    movies = df_all_movies["movie"].unique()
+
+    for movie in movies:
+        # Access the dictionary of subjects for the current movie
+        subject_onsets = delta_time[movie]
+        # Select the first available subject (assuming we don't need to specify which one)
+        first_subject = next(iter(subject_onsets))
+        # Retrieve start and duration for this subject
+        start_movie_sec, length_movie_sec = subject_onsets[first_subject]
+
+        start_movie_tr = int(start_movie_sec / tr_len)
+        lenght_movie_tr = int(length_movie_sec / tr_len)
+        start_test_set = start_movie_tr + int(lenght_movie_tr * percentage_test)
+
+        # put -1 in the timestamp of the test set inside  train set
+        df_train.loc[(df_train.movie == movie) & (df_train.timestam_tr > start_test_set), "label"] = -1
+
+        # do the opposite
+        df_test.loc[(df_test.movie == movie) & (df_test.timestam_tr < start_test_set), "label"] = -1
+
+
+    return df_train, df_test
 
 
 # class GraphEmo(Data):

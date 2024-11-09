@@ -15,3 +15,4 @@
 
 - how to split train test --> we used entropy
 - env with alrey cirret veriosn pythrich
+-QUESTION: how can we split horizontally (train/test) without information leakage. If we use a window to calculate the node features, for sure the nodes on the border will have info thaat comes form the other set
