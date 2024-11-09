@@ -13,29 +13,5 @@
     - crossvalidation(use all dataset)
     - set apart a rel never seen test set
 
-
-
-IDEAS
-- nodes features
-    - single fmri value
-    - frmi values in a past window, weighted with a kerner
-    - specific metric
-        - std
-        - means
-        - cov along space
-- connectivity (initial graph)
-    - FC
-        - whole timeseries
-        - based short past window
-    - Fubctional network
-    - score
-    - clique
-- y labels
-    - regression
-    - classification
-        - single class
-            - take max score
-        - multi class   
-            - take above thr (one hot encode) --> (put 1 if scores above 2std)
-- interpretation
-    - not best nodes, but best network
+- how to split train test --> we used entropy
+- env with alrey cirret veriosn pythrich

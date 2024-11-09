@@ -74,6 +74,16 @@ class DatasetEmo():
                         #print(x_matrix.shape) #must be (#nodes, #feat_nodes)
                         x_matrix = torch.tensor(x_matrix, dtype=torch.float)
 
+                    if node_feat == "symmetricwindow":
+                        sizewind = 4
+                        time_around = [i for i in range(timepoint - sizewind, timepoint + sizewind + 1)]
+                        x = df_single_movie_sub.loc[df_single_movie_sub.timestamp_tr.isin(time_around) ,["vindex", "score", "timestamp_tr"]]
+                        x = x.pivot(index= "vindex", columns = "timestamp_tr", values = "score")
+                        #print(x.shape) #must be (#nodes, #feat_nodes)
+                        #print(x)
+                        x_matrix = torch.tensor(x.values, dtype=torch.float)
+
+
                     #NODE CONNECTIVITY
                         #attnetion df alredy ordered before by vindex
                     if intial_adj_method == "clique":
