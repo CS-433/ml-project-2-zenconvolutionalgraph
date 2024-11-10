@@ -134,6 +134,18 @@ NO --> decision made with the lab
 cannot do random --> maybe some timepoints in traion and tets are close --> so they are same scene of the kvoie --> so it like a little of info lackage
 Solution: use whole movirs ofr tets ste
 
+# MICHAEL'S ANSWERS
+- take abs of z-correct 
+    - very differt sing of emotion
+    - we **suppose** that the same graph would be elicited in the brain both for neg and pos values
+- classifiy each timepoint, not only the one where emotions are stable
+- only use test-train   
+    - no crossvalidation
+- train/test split  
+    - all emo in test
+    - same distrubution in test
+    - not random --> scenes not too close --> info leackage
+
 
 # WEDNESDAY
 - baslines method

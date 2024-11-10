@@ -20,7 +20,9 @@ class DatasetEmo():
                     # "clique"
                     #FC dynamic:  "fcmovie", "fcwindow"
                     #FN (subcorticla with clique): "$FN_const" "$FN_weighted"
-                device = "cpu" # I want to move data in GPU ONLY during batch
+                device = "cpu", # I want to move data in GPU ONLY during batch
+                sizewind = 4
+
                 ):
         
         self.device = device #or ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -75,7 +77,6 @@ class DatasetEmo():
                         x_matrix = torch.tensor(x_matrix, dtype=torch.float)
 
                     if node_feat == "symmetricwindow":
-                        sizewind = 4
                         time_around = [i for i in range(timepoint - sizewind, timepoint + sizewind + 1)]
                         x = df_single_movie_sub.loc[df_single_movie_sub.timestamp_tr.isin(time_around) ,["vindex", "score", "timestamp_tr"]]
                         x = x.pivot(index= "vindex", columns = "timestamp_tr", values = "score")
@@ -128,7 +129,7 @@ def split_train_test_vertically(df_all_movies, test_movies_dict = {"Sintel": 7, 
 
     return df_train, df_test
 
-def split_train_test_horizontally(df_all_movies, percentage_test = 0.2, path_pickle_delay = "data/raw/labels/run_onsets.pkl", tr_len = 1.3):
+def split_train_test_horizontally(df_all_movies, percentage_train = 0.8, path_pickle_delay = "data/raw/labels/run_onsets.pkl", path_movie_title_mapping = "data/raw/labels/category_mapping_movies.csv", tr_len = 1.3):
     
     #Idea: I can say that one datapoint is NO in test/train set by tranforming its label in -1
     # Indeed only timepoints that have labe != -1 will be used to create a graph and thus to be predicted
@@ -148,11 +149,16 @@ def split_train_test_horizontally(df_all_movies, percentage_test = 0.2, path_pic
     with open("data/raw/labels/run_onsets.pkl", "rb") as file:
         delta_time = pkl.load(file)
 
+    # Load mapping of kovie title, ex AfterTheRain --> 0
+    df_movie_mapping = pd.read_csv(path_movie_title_mapping)
+
     movies = df_all_movies["movie"].unique()
 
     for movie in movies:
+        # Take literal name of the movie
+        movie_str = df_movie_mapping[df_movie_mapping.movie == movie]["movie_str"].values[0]
         # Access the dictionary of subjects for the current movie
-        subject_onsets = delta_time[movie]
+        subject_onsets = delta_time[movie_str]
         # Select the first available subject (assuming we don't need to specify which one)
         first_subject = next(iter(subject_onsets))
         # Retrieve start and duration for this subject
@@ -160,16 +166,65 @@ def split_train_test_horizontally(df_all_movies, percentage_test = 0.2, path_pic
 
         start_movie_tr = int(start_movie_sec / tr_len)
         lenght_movie_tr = int(length_movie_sec / tr_len)
-        start_test_set = start_movie_tr + int(lenght_movie_tr * percentage_test)
+        start_test_set = start_movie_tr + int(lenght_movie_tr * percentage_train)
 
         # put -1 in the timestamp of the test set inside  train set
-        df_train.loc[(df_train.movie == movie) & (df_train.timestam_tr > start_test_set), "label"] = -1
+        df_train.loc[(df_train.movie == movie) & (df_train.timestamp_tr > start_test_set), "label"] = -1
 
         # do the opposite
-        df_test.loc[(df_test.movie == movie) & (df_test.timestam_tr < start_test_set), "label"] = -1
+        df_test.loc[(df_test.movie == movie) & (df_test.timestamp_tr < start_test_set), "label"] = -1
 
 
     return df_train, df_test
+
+
+def create_feature_label_tensors_for_FNN(df, sizewind=4):
+    X = []
+    y = []
+    
+    # Loop through unique movies in the dataset
+    movies = df["movie"].unique()
+    print(f"Movies in this df: {movies}")
+
+    for movie in movies:
+        df_single_movie = df[df.movie == movie]
+        subjects = df_single_movie["id"].unique()
+
+        for sub in subjects:
+            df_single_movie_sub = df_single_movie[df_single_movie.id == sub]
+            # Timepoints to predict
+            timepoints = df_single_movie_sub[df_single_movie_sub.label != -1]["timestamp_tr"].unique()
+            # Order rows by 'vindex'
+            df_single_movie_sub = df_single_movie_sub.sort_values(by="vindex")
+
+            for timepoint in timepoints:
+                print(f"Processing movie: {movie}, subject: {sub}, timepoint: {timepoint - timepoints[0]}/{len(timepoints)}")
+
+                # Select data for a symmetric window around the timepoint
+                time_around = [i for i in range(timepoint - sizewind, timepoint + sizewind + 1)]
+                x = df_single_movie_sub.loc[df_single_movie_sub.timestamp_tr.isin(time_around), ["vindex", "score", "timestamp_tr"]]
+                x = x.pivot(index="vindex", columns="timestamp_tr", values="score")
+                x_matrix = torch.tensor(x.values, dtype=torch.float)
+
+                # Label
+                label = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]["label"].unique()[0]
+                y_value = torch.tensor(label, dtype=torch.long)
+
+                # Append the feature and label tensors to lists
+                X.append(x_matrix)
+                y.append(y_value)
+    
+    # Concatenate the list of feature and label tensors into final tensors
+    X = torch.stack(X)
+    y = torch.tensor(y, dtype=torch.long)
+
+    return X, y
+
+
+
+
+
+
 
 
 # class GraphEmo(Data):

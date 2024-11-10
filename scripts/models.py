@@ -87,3 +87,139 @@ def visualize_attention_weights(model, data, head=0):
             width=edge_widths, edge_color=edge_widths, edge_cmap=plt.cm.Blues)
     plt.title(f"Visualization of Attention Weights for Head {head}")
     plt.show()
+
+
+class FNN(nn.Module):
+
+    # Adapted from: https://github.com/rohanrao619/Deep_Neural_Networks_from_Scratch/blob/master/Deep_Neural_Networks_from_Scratch_using_NumPy.ipynb
+
+    def __init__(self, 
+                input_size, 
+                output_size, 
+                hidden_dims, 
+                output_type="classification", 
+                initializer="xavier", 
+                activation="lrelu", 
+                leaky_relu_slope=0.1, 
+                device=None):
+        
+        super().__init__()
+
+        # Set up device
+        self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        self.output_type = output_type
+        self.layers = nn.ModuleList()
+        
+        # Layer dimensions
+        layer_dims = [input_size] + hidden_dims + [output_size] #output[100, 500, 10]
+        #print(layer_dims)
+
+        # Define layers
+        for i in range(len(layer_dims) - 1):
+            layer = nn.Linear(layer_dims[i], layer_dims[i+1])
+            # Weight initialization
+            if initializer == 'xavier':
+                nn.init.xavier_uniform_(layer.weight)
+            elif initializer == 'he':
+                nn.init.kaiming_uniform_(layer.weight, nonlinearity='relu')
+            else:
+                nn.init.normal_(layer.weight)
+            self.layers.append(layer)
+
+        # Activation function
+        if activation == "relu":
+            self.activation = nn.ReLU()
+        elif activation == "sigmoid":
+            self.activation = nn.Sigmoid()
+        elif activation == "tanh":
+            self.activation = nn.Tanh()
+        elif activation == "lrelu":
+            self.activation = nn.LeakyReLU(leaky_relu_slope)
+        else:
+            self.activation = nn.Identity()
+
+        # Move model to the correct device
+        self.to(self.device)
+
+    def forward(self, X):
+        X = X.to(self.device)
+        for layer in self.layers[:-1]:  # Apply activation after each layer except the output
+            X = self.activation(layer(X))
+        # Output layer
+        X = self.layers[-1](X)
+        if self.output_type == "classification":
+            return X # Just return raw logits without softmax
+        return X
+
+    def train_model(self, 
+                    X_train, 
+                    Y_train, 
+                    X_val, 
+                    Y_val, 
+                    optimizer="adam", 
+                    learning_rate=0.01, 
+                    epochs=100, 
+                    batch_size=32):
+        
+        # Move data to the appropriate device
+        X_train, Y_train = X_train.to(self.device), Y_train.to(self.device)
+        X_val, Y_val = X_val.to(self.device), Y_val.to(self.device)
+        
+        # Set up optimizer
+        if optimizer == "adam":
+            optim = torch.optim.Adam(self.parameters(), lr=learning_rate)
+        elif optimizer == "sgd":
+            optim = torch.optim.SGD(self.parameters(), lr=learning_rate)
+        elif optimizer == "rmsprop":
+            optim = torch.optim.RMSprop(self.parameters(), lr=learning_rate)
+        
+        # Loss function
+        criterion = nn.CrossEntropyLoss() if self.output_type == "classification" else nn.MSELoss()
+        
+        # Initialize variables to accumulate losses
+        train_losses = []
+        val_losses = []
+        
+        for epoch in range(epochs):
+            # Reset epoch losses
+            epoch_train_loss = 0
+            epoch_val_loss = 0
+            
+            # Batch processing
+            permutation = torch.randperm(X_train.size(0))
+            for i in range(0, X_train.size(0), batch_size):
+                indices = permutation[i:i+batch_size]
+                batch_x, batch_y = X_train[indices], Y_train[indices]
+                
+                # Zero gradients, forward pass, backward pass, and optimizer step
+                optim.zero_grad()
+                outputs = self(batch_x)
+                loss = criterion(outputs, batch_y)
+                loss.backward()
+                optim.step()
+                
+                epoch_train_loss += loss.item()
+            
+            # Calculate validation loss after each epoch
+            with torch.no_grad():
+                val_outputs = self(X_val)
+                val_loss = criterion(val_outputs, Y_val)
+                epoch_val_loss += val_loss.item()
+            
+            # Optional: print epoch status
+            print(f"Epoch {epoch+1}/{epochs}, Train Loss: {epoch_train_loss / len(X_train):.4f}, Val Loss: {epoch_val_loss / len(X_val):.4f}")
+            
+            # Accumulate total losses
+            train_losses.append(epoch_train_loss)
+            val_losses.append(epoch_val_loss)
+        
+        # Return total loss for both training and validation
+        return train_losses, val_losses
+
+    def predict(self, X):
+        X = X.to(self.device)
+        with torch.no_grad():
+            outputs = self(X)
+        if self.output_type == "classification":
+            return torch.argmax(outputs, dim=1)
+        return outputs

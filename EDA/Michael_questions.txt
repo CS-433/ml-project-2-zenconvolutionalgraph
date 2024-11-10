@@ -1,18 +1,15 @@
-- how to interpolate between 2 timeseries.
-    - we tried nearest
-        - CON: 
-            - lose labels timepost
-            - maybe take a lebels that is very far from the correct one
-- score emo: with ghieher psotive or magnitude of z.wcore
-- can you give us some intial grpah with out connecitvyt (i.e 414 nodes)
-- why need to learn the grpah, when we can use GAT???
-- maybe take only the timepoints that have a constant label for a long time (exclude borders)??
--is it corrct how we intiilaize node weights
-- size of the grpahs is areund 4M each one --> 4 * 13 * 30 * 300
-- do we want to validate with  
-    - crossvalidation(use all dataset)
-    - set apart a rel never seen test set
+
+
 
 - how to split train test --> we used entropy
 - env with alrey cirret veriosn pythrich
 -QUESTION: how can we split horizontally (train/test) without information leakage. If we use a window to calculate the node features, for sure the nodes on the border will have info thaat comes form the other set
+- show idea GAT
+- 14 movies?
+- betweenViewing"S"
+- startmovie = (start_sec/1.3)
+    -int or floor
+- can we predict only a subset of emptions and not 50
+- almost impossible ot be sure that ttain and tets have same distircvutuon
+- FNN use test as validation
+- alredy make env with correct version of torch
