@@ -9,7 +9,7 @@ import torch
 import os
 from torch_geometric.data import Batch
 from torch.utils.data import DataLoader
-
+from sklearn.model_selection import train_test_split
 
 class DatasetEmo():
 
@@ -177,6 +177,25 @@ def split_train_test_horizontally(df_all_movies, percentage_train = 0.8, path_pi
 
     return df_train, df_test
 
+def split_train_test_rest_classification(df_all_movies, df_rest):
+
+    df_all_movies = df_all_movies.copy()
+    df_rest = df_rest.copy()
+
+    # chage the label, now they hsodl be binary
+    df_rest.loc[df_rest.label != -1, "label"] = 0
+    df_all_movies.loc[df_all_movies.label != -1, "label"] = 1
+    
+    # Take a single movie, alredy checjed that isnde there is a similar number of timepotis to classify as in rest
+    df_single_movie = df_all_movies[df_all_movies.movie == 0]
+
+    df_merge = pd.concat([df_single_movie, df_rest])
+
+    # TODO
+
+    pass
+
+
 
 def create_feature_label_tensors_for_FNN(df, sizewind=4):
     X = []
@@ -209,7 +228,7 @@ def create_feature_label_tensors_for_FNN(df, sizewind=4):
                 # Label
                 label = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]["label"].unique()[0]
                 y_value = torch.tensor(label, dtype=torch.long)
-
+labels_df
                 # Append the feature and label tensors to lists
                 X.append(x_matrix)
                 y.append(y_value)

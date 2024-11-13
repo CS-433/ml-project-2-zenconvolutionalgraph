@@ -152,7 +152,7 @@ class FNN(nn.Module):
         return X
 
     def train_model(self, 
-                    X_train, 
+                    X_train, #(samples, nodes * window)
                     Y_train, 
                     X_val, 
                     Y_val, 
@@ -223,3 +223,80 @@ class FNN(nn.Module):
         if self.output_type == "classification":
             return torch.argmax(outputs, dim=1)
         return outputs
+    
+
+class Transformer(nn.Module):
+    def __init__(self,
+                input_dim, 
+                num_heads, 
+                num_layers, 
+                hidden_dim, 
+                num_classes, 
+                dropout=0.1
+            ):
+
+        super().__init__()
+
+        # [CLS] token embedding
+        self.cls_token = nn.Parameter(torch.randn(1, 1, input_dim)) 
+            # 1cls tokes x 1 batch x dim ROW (number of timepoits for each timeseries)
+            # nn.Parameter --> make it a learnable parameter, meaning the model can update this token's values during training.
+
+        # Row (time series) embedding layer
+        self.row_embedding = nn.Linear(input_dim, hidden_dim)
+            # linear layer that projects each row (a time series for one ROI) from input_dim (number of time steps) to hidden_dim (transformer’s internal dimension).
+
+        # Transformer encoder layer
+        encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, 
+                                                   nhead=num_heads, 
+                                                   dropout=dropout
+                                                   )
+        # stacks multiple copies of encoder_layer to create a deeper transformer.
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, 
+                                                        num_layers=num_layers
+                                                        )
+
+        # Classification head
+        self.fc = nn.Linear(hidden_dim, num_classes)
+            #linear layer that maps the final embedding of the [CLS] token (dimension hidden_dim) to num_classes
+
+    def forward(self, x):
+        # Input x has shape (batch_size, num_rows, time_steps)
+        # - batch_size: Number of matrices in the batch.
+        # - num_rows: Number of rows (each corresponding to an ROI or time series) in each matrix.
+        # - time_steps: Number of time steps in each time series (length of each row).
+
+        batch_size, num_rows, time_steps = x.shape
+
+        # Flatten each row's time series into a single vector by keeping all time steps in sequence
+        # After reshaping, x has shape (batch_size, num_rows, num_timesteps)
+        x = x.reshape(batch_size, num_rows, -1)
+
+        # Expand the [CLS] token for each item in the batch and concatenate it with the rows.
+        # This [CLS] token will act as the summary representation for the entire matrix.
+        # After expanding, `cls_tokens` has shape (batch_size, 1, num_timesteps)
+        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
+        
+        # Concatenate the [CLS] token with the input x along the row dimension.
+        # The resulting shape of x is (batch_size, num_rows + 1, num_timesteps)
+        x = torch.cat((cls_tokens, x), dim=1)
+
+        # Embed each row (including the [CLS] token) to the transformer's hidden dimension
+        # Shape of x after embedding: (batch_size, num_rows + 1, hidden_dim)
+        x = self.row_embedding(x)
+
+        # Pass the embedded rows through the transformer encoder to get contextualized embeddings
+        # Shape of x after transformer encoder: (batch_size, num_rows + 1, hidden_dim)
+        x = self.transformer_encoder(x)
+
+        # Extract the embedding of the [CLS] token, which is the first row in x
+        # Shape of cls_embedding: (batch_size, hidden_dim)
+        cls_embedding = x[:, 0, :]
+
+        # Pass the [CLS] token's embedding through the classification head to get final class scores
+        # Shape of out: (batch_size, num_classes)
+        out = self.fc(cls_embedding)
+
+        return out # logits
+
+

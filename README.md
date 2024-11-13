@@ -122,10 +122,8 @@ Usefull links:
   -(https://github.com/elyesmanai/simpletransformerss?tab=readme-ov-file --> need before to pass form numebr to text)
   -orsimpletrnafomer done by us
   - https://github.com/lucidrains/tab-transformer-pytorch/tree/main
-- use GAT
-  -(https://github.com/usccolumbia/deeperGATGNN)
-- use GSL
-  - open gsl
+
+
 
 # Cross calidation
 NO --> decision made with the lab
@@ -145,22 +143,43 @@ Solution: use whole movirs ofr tets ste
     - all emo in test
     - same distrubution in test
     - not random --> scenes not too close --> info leackage
+    - in split horizonyllay, legit to have a little info leackge
+- yes, we have 14 movies
+- prdict only:
+  - [‘Anger’,‘Guilt’,‘WarmHeartedness’,‘Disgust’,‘Happiness’,‘Fear’,‘Regard’,‘Anxiety’, ‘Satisfaction’,‘Pride’,‘Surprise’,‘Love’,‘Sad’]
+-
+
 
 
 # WEDNESDAY
-- baslines method
-  - KNN (rith K = 50) cristinao
-  - GNN (clique) Zhoufu
-  - FeedForward gabriele
-  - random forest
-- other baselines
-  - OpenGSL --> cristiano
-  - GAT --> OK (check and imporove)
-  - Transformer --> agbri
-  - Eutoendoer --> zhofu
-- complex model
-  - ????
-  - read 
-- add horizotnal splot trian/test
 
-- splti train test acorss time in movie
+  TODO
+- OK --> change the df_movies to use only 13 emotios 
+- check distribution triana nd chekc with verticla and horizontal
+- try to classify between movie and rest
+- OK --> mutiple label classfication  [1 0 1 0 1... 0   
+
+
+- models
+    - lots of simple ones
+        - GAT      --> G
+        - FNN   OK --> G
+        - knn   OK --> C
+        - GNN      --> Z
+        - transf   --> 
+        - RF       --> 
+        - OpenGSL  --> C
+    - one complex from a paper
+        - VIB-gls  
+            - autoencoder
+
+
+Sunday: 10th  8:00
+  - by then:
+    - gnn Z
+    - openGSL C
+    - chnage GAT G
+  - implement VIB
+tuesday: 19th 11:00
+  - implement VIB
+presenation:  17th tuesday 14:00 --> 10 min + 5 min
