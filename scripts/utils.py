@@ -182,8 +182,10 @@ def split_train_test_rest_classification(df_all_movies, df_rest):
     df_all_movies = df_all_movies.copy()
     df_rest = df_rest.copy()
 
-    # chage the label, now they hsodl be binary
-    df_rest.loc[df_rest.label != -1, "label"] = 0
+    # chage the label, now they should be binary
+        # 0 = rest
+        # 1 = movie
+    df_rest.loc[df_rest.label != -1, "label"] = 0 #-1 indicates timepoitns to not classifify
     df_all_movies.loc[df_all_movies.label != -1, "label"] = 1
     
     # Take a single movie, alredy checjed that isnde there is a similar number of timepotis to classify as in rest
@@ -191,9 +193,27 @@ def split_train_test_rest_classification(df_all_movies, df_rest):
 
     df_merge = pd.concat([df_single_movie, df_rest])
 
-    # TODO
+    # Create train and test
+        #Attnetion : they are the same df
+        # the only differce is that the column label will assume -1 in difert ways
+    # split horizontally
+    thr_hor = 350
+    df_train = df_merge.copy()
+    df_train.loc[df_train.timestamp_tr > thr_hor, "label"] = -1
+    df_test = df_merge.copy()
+    df_test.loc[df_test.timestamp_tr <= thr_hor, "label"] = -1
 
-    pass
+    # how many classificable timepoitn soin each df
+    print("Classificable timepoints in train and test")
+
+    print(df_train[(df_train.label != -1) & (df_train.id == 1) & (df_train.vindex == 0)]["label"].value_counts().sum())
+    print(df_train[(df_train.id == 1) & (df_train.vindex == 0)]["label"].value_counts())
+
+    print(df_test[(df_test.label != -1) & (df_test.id == 1) & (df_test.vindex == 0)]["label"].value_counts().sum())
+    print(df_test[(df_test.id == 1) & (df_test.vindex == 0)]["label"].value_counts())
+
+    return df_train, df_test
+
 
 
 
@@ -228,7 +248,6 @@ def create_feature_label_tensors_for_FNN(df, sizewind=4):
                 # Label
                 label = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]["label"].unique()[0]
                 y_value = torch.tensor(label, dtype=torch.long)
-labels_df
                 # Append the feature and label tensors to lists
                 X.append(x_matrix)
                 y.append(y_value)

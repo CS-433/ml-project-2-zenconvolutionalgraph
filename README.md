@@ -156,7 +156,7 @@ Solution: use whole movirs ofr tets ste
   TODO
 - OK --> change the df_movies to use only 13 emotios 
 - check distribution triana nd chekc with verticla and horizontal
-- try to classify between movie and rest
+- OK: try to classify between movie and rest --> FNN 87% accuracy
 - OK --> mutiple label classfication  [1 0 1 0 1... 0   
 
 
@@ -181,5 +181,5 @@ Sunday: 10th  8:00
     - chnage GAT G
   - implement VIB
 tuesday: 19th 11:00
-  - implement VIB
+  - implement VIB https://github.com/RingBDStack/VIB-GSL
 presenation:  17th tuesday 14:00 --> 10 min + 5 min

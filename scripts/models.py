@@ -152,15 +152,15 @@ class FNN(nn.Module):
         return X
 
     def train_model(self, 
-                    X_train, #(samples, nodes * window)
-                    Y_train, 
-                    X_val, 
-                    Y_val, 
-                    optimizer="adam", 
-                    learning_rate=0.01, 
-                    epochs=100, 
-                    batch_size=32):
-        
+                X_train, #(samples, nodes * window)
+                Y_train, 
+                X_val, 
+                Y_val, 
+                optimizer="adam", 
+                learning_rate=0.01, 
+                epochs=100, 
+                batch_size=32):
+    
         # Move data to the appropriate device
         X_train, Y_train = X_train.to(self.device), Y_train.to(self.device)
         X_val, Y_val = X_val.to(self.device), Y_val.to(self.device)
@@ -172,9 +172,12 @@ class FNN(nn.Module):
             optim = torch.optim.SGD(self.parameters(), lr=learning_rate)
         elif optimizer == "rmsprop":
             optim = torch.optim.RMSprop(self.parameters(), lr=learning_rate)
+        else:
+            raise ValueError(f"Unsupported optimizer: {optimizer}")
         
         # Loss function
         criterion = nn.CrossEntropyLoss() if self.output_type == "classification" else nn.MSELoss()
+        criterion.to(self.device)
         
         # Initialize variables to accumulate losses
         train_losses = []
@@ -185,7 +188,7 @@ class FNN(nn.Module):
             epoch_train_loss = 0
             epoch_val_loss = 0
             
-            # Batch processing
+            # Shuffle and batch processing
             permutation = torch.randperm(X_train.size(0))
             for i in range(0, X_train.size(0), batch_size):
                 indices = permutation[i:i+batch_size]
@@ -200,14 +203,26 @@ class FNN(nn.Module):
                 
                 epoch_train_loss += loss.item()
             
-            # Calculate validation loss after each epoch
-            with torch.no_grad():
-                val_outputs = self(X_val)
-                val_loss = criterion(val_outputs, Y_val)
-                epoch_val_loss += val_loss.item()
+            # Normalize training loss
+            epoch_train_loss /= len(X_train) / batch_size
             
-            # Optional: print epoch status
-            print(f"Epoch {epoch+1}/{epochs}, Train Loss: {epoch_train_loss / len(X_train):.4f}, Val Loss: {epoch_val_loss / len(X_val):.4f}")
+            # Calculate validation loss
+            self.eval() #This ensures layers like dropout or batch normalization behave correctly.
+            with torch.no_grad():
+                # process X_val in batches, similar to training.
+                for i in range(0, X_val.size(0), batch_size):
+                    val_indices = torch.arange(i, min(i+batch_size, X_val.size(0)))
+                    val_batch_x, val_batch_y = X_val[val_indices], Y_val[val_indices]
+                    val_outputs = self(val_batch_x)
+                    val_loss = criterion(val_outputs, val_batch_y)
+                    epoch_val_loss += val_loss.item()
+            self.train()
+            
+            # Normalize validation loss
+            epoch_val_loss /= len(X_val) / batch_size
+            
+            # Print epoch status
+            print(f"Epoch {epoch+1}/{epochs}, Train Loss: {epoch_train_loss:.4f}, Val Loss: {epoch_val_loss:.4f}")
             
             # Accumulate total losses
             train_losses.append(epoch_train_loss)
