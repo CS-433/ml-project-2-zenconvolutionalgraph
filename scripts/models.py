@@ -216,7 +216,7 @@ class FNN(nn.Module):
             epoch_val_loss /= len(X_val) / batch_size
             
             # Print epoch status
-            print(f"Epoch {epoch+1}/{epochs}, Train Loss: {epoch_train_loss:.4f}, Val Loss: {epoch_val_loss:.4f}")
+            print(f"Epoch {epoch+1}/{epochs}, Train Loss: {epoch_train_loss:.4f}, Test Loss: {epoch_val_loss:.4f}")
             
             # Accumulate total losses
             train_losses.append(epoch_train_loss)

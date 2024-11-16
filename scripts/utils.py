@@ -129,52 +129,80 @@ def split_train_test_vertically(df_all_movies, test_movies_dict = {"Sintel": 7, 
 
     return df_train, df_test
 
-def split_train_test_horizontally(df_all_movies, percentage_train = 0.8, path_pickle_delay = "data/raw/labels/run_onsets.pkl", path_movie_title_mapping = "data/raw/labels/category_mapping_movies.csv", tr_len = 1.3):
-    
-    #Idea: I can say that one datapoint is NO in test/train set by tranforming its label in -1
-    # Indeed only timepoints that have labe != -1 will be used to create a graph and thus to be predicted
 
-    # I will split in order ot have always the final x% of the movie in the test set
+def split_train_val_test_horizontally(df_all_movies, percentage_train=0.8, percentage_val=0.0, path_pickle_delay="data/raw/labels/run_onsets.pkl", path_movie_title_mapping="data/raw/labels/category_mapping_movies.csv", tr_len=1.3):
+    """
+    Splits the movie data into train, validation, and test sets based on sequential timing.
+    The split is done based on the movie's timeline, ensuring no randomization.
 
-    # Attnetion: still info leackage on the border
+    Args:
+    - df_all_movies: DataFrame containing all movie data with timestamps and labels.
+    - percentage_train: Proportion of the movie's data to be used for training.
+    - percentage_val: Proportion of the movie's data to be used for validation.
+    - path_pickle_delay: Path to the pickle file containing the onsets of the movies.
+    - path_movie_title_mapping: Path to the CSV file mapping movie titles to numeric ids.
+    - tr_len: Length of each time step in seconds (TR length).
 
-    #Attention: for same movie but differt subject the movie starts at differt time (but just few sec)
-    # in this case as we ar elobisn only few labels we ignore this fact in the splitting procedure
-
-    # Split the df with all movies in train and test
-    df_train = df_all_movies.copy()
-    df_test = df_all_movies.copy()
-   
-    # Load onset of different movies, for differt subejcts
-    with open("data/raw/labels/run_onsets.pkl", "rb") as file:
+    Returns:
+    - df_train: DataFrame with updated labels for training data.
+    - df_val: DataFrame with updated labels for validation data.
+    - df_test: DataFrame with updated labels for test data.
+    """
+    # Load the onset times for different subjects in different movies
+    with open(path_pickle_delay, "rb") as file:
         delta_time = pkl.load(file)
 
-    # Load mapping of kovie title, ex AfterTheRain --> 0
+    # Load mapping of movie title to movie ID
     df_movie_mapping = pd.read_csv(path_movie_title_mapping)
 
+    # Create empty DataFrames for train, validation, and test
+    df_train = df_all_movies.copy()
+    df_val = df_all_movies.copy()
+    df_test = df_all_movies.copy()
+
+    # Loop through each movie to perform the sequential split
     movies = df_all_movies["movie"].unique()
 
     for movie in movies:
-        # Take literal name of the movie
+        # Retrieve the movie string name
         movie_str = df_movie_mapping[df_movie_mapping.movie == movie]["movie_str"].values[0]
-        # Access the dictionary of subjects for the current movie
+        
+        # Access the dictionary of subjects for this movie
         subject_onsets = delta_time[movie_str]
-        # Select the first available subject (assuming we don't need to specify which one)
+        
+        # Assume we are working with the first subject
         first_subject = next(iter(subject_onsets))
-        # Retrieve start and duration for this subject
-        start_movie_sec, length_movie_sec = subject_onsets[first_subject]
+        
+        # Retrieve the start time and duration of the movie for this subject
+        start_movie_tr, length_movie_tr = subject_onsets[first_subject]
 
-        start_movie_tr = int(start_movie_sec / tr_len)
-        lenght_movie_tr = int(length_movie_sec / tr_len)
-        start_test_set = start_movie_tr + int(lenght_movie_tr * percentage_train)
+        # Add delay
+        start_movie_tr += 4 #4TR
+        
+        # Define the splitting points based on the percentages
+        end_train_set = start_movie_tr + int(length_movie_tr * percentage_train)
+        end_val_set = end_train_set + int(np.ceil(length_movie_tr * percentage_val))
 
-        # put -1 in the timestamp of the test set inside  train set
-        df_train.loc[(df_train.movie == movie) & (df_train.timestamp_tr > start_test_set), "label"] = -1
+        print(f"\nMovie: {movie_str}")
+        print(f"  Start Time (TR)+4: {start_movie_tr}")
+        print(f"  Total Length (TR): {length_movie_tr}")
+        print(f"  Train End (TR): {end_train_set}")
+        print(f"  Validation End (TR): {end_val_set}")
+        print(f"  Movie End (TR): {start_movie_tr + length_movie_tr}")
+        
+        # Train set: Data before the train split point
+        df_train.loc[(df_train.movie == movie) & (df_train.timestamp_tr > end_train_set), "label"] = -1
+        
+        # Validation set: Data between the train and validation split points
+        df_val.loc[(df_val.movie == movie) & (df_val.timestamp_tr <= end_train_set), "label"] = -1
+        df_val.loc[(df_val.movie == movie) & (df_val.timestamp_tr > end_val_set), "label"] = -1
 
-        # do the opposite
-        df_test.loc[(df_test.movie == movie) & (df_test.timestamp_tr < start_test_set), "label"] = -1
+        
+        # Test set: Data after the validation split point
+        df_test.loc[(df_test.movie == movie) & (df_test.timestamp_tr <= end_val_set), "label"] = -1
 
-    return df_train, df_test
+    return df_train, df_val, df_test
+
 
 def split_train_test_rest_classification(df_all_movies, df_rest):
 
@@ -212,8 +240,6 @@ def split_train_test_rest_classification(df_all_movies, df_rest):
     print(df_test[(df_test.id == 1) & (df_test.vindex == 0)]["label"].value_counts())
 
     return df_train, df_test
-
-
 
 
 def create_feature_label_tensors_for_FNN(df, sizewind=4):
