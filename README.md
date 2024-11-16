@@ -1,3 +1,9 @@
+
+# AFTER THE RAIN
+- duration sec = 382 --> 293 TR
+- start sec = 76 --> 56 TR
+
+
 # GNN_E
 
 Usefull links:

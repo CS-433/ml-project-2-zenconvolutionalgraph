@@ -19,14 +19,8 @@ class GATModel(nn.Module):
                                 concat=False #This means that the attention heads will be averaged rather than concatenated. 
                                 )
         
-        # TODO:
-        # add pooling
-        
         # Linear Layer for classification (50 classes)
         self.fc = nn.Linear(hidden_dim, output_dim)
-
-        # TODO:
-        # add non linearity
 
     def forward(self, data):
         # data is a Batch object that contains a batch of graphs

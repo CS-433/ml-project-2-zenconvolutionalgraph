@@ -174,7 +174,6 @@ def split_train_test_horizontally(df_all_movies, percentage_train = 0.8, path_pi
         # do the opposite
         df_test.loc[(df_test.movie == movie) & (df_test.timestamp_tr < start_test_set), "label"] = -1
 
-
     return df_train, df_test
 
 def split_train_test_rest_classification(df_all_movies, df_rest):
