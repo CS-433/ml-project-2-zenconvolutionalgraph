@@ -309,3 +309,26 @@ class Transformer(nn.Module):
         return out # logits
 
 
+class SimpleGCN(nn.Module):
+    def __init__(self, input_dim, hidden_dim1, hidden_dim2, output_dim):
+        super().__init__()
+        self.conv1 = pyg_nn.GCNConv(input_dim, hidden_dim1)
+        self.conv2 = pyg_nn.GCNConv(hidden_dim1, hidden_dim2)
+        self.linear = nn.Linear(hidden_dim2, output_dim)
+        #he init
+        nn.init.kaiming_uniform_(self.linear.weight)
+
+
+
+    def forward(self, x, edge_index, batch):
+        #print(x.shape)
+        x = self.conv1(x, edge_index)
+        #print(x.shape)
+        x = F.relu(x)
+        #print(x.shape)
+        x = self.conv2(x, edge_index)
+        #print(x.shape)
+        x = global_mean_pool(x, batch)
+        x = F.relu(x)
+        x = self.linear(x)
+        return x
