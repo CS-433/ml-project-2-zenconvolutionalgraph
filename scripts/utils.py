@@ -19,10 +19,11 @@ class DatasetEmo():
                 intial_adj_method = "clique",
                     # "clique"
                     #FC dynamic:  "fcmovie", "fcwindow"
-                    #FN (subcorticla with clique): "$FN_const" "$FN_weighted"
+                    #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
+                FN = "Limbic", #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
+                FN_paths = "data/raw/FN_raw",
                 device = "cpu", # I want to move data in GPU ONLY during batch
                 sizewind = 4
-
                 ):
         
         self.device = device #or ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -37,7 +38,13 @@ class DatasetEmo():
         edge_index_clique_414 = torch.combinations(torch.arange(n_nodes), r=2).t()
         self.edge_index_clique_414 = torch.cat([edge_index_clique_414, edge_index_clique_414.flip(0)], dim=1)
         self.edge_attr_clique_414  = torch.ones(self.edge_index_clique_414.size(1), 1)  # 1 attribute per edge
-
+        #for clique FN
+        df_FN = pd.read_csv(os.path.join(FN_paths, f"FN_{FN}.csv")) #remember that the "Sub" FN is always present
+        nodes_in_FN = df_FN[df_FN.is_in_FN == 1].vindex.values # Extract nodes that are in the FN subset
+        self.nodes_not_in_FN = df_FN[~(df_FN.is_in_FN == 1)].vindex.values
+        edge_index_clique_FN = torch.combinations(torch.tensor(nodes_in_FN), r=2).t()  # Pairwise combinations
+        self.edge_index_clique_FN = torch.cat([edge_index_clique_FN, edge_index_clique_FN.flip(0)], dim=1)  # Add both directions
+        self.edge_attr_clique_FN = torch.ones(self.edge_index_clique_FN.size(1), 1)  # 1 attribute per edge
 
         # Ectarct movies
         movies = df["movie"].unique()
@@ -70,7 +77,6 @@ class DatasetEmo():
                                          
                     #NODE FEAT
                     if node_feat == "singlefmri":
-       
                         x = df_single_movie_sub_timepoint[["vindex", "score"]]
                         x_matrix = np.array(x["score"]).reshape(-1, 1)
                         #print(x_matrix.shape) #must be (#nodes, #feat_nodes)
@@ -92,6 +98,29 @@ class DatasetEmo():
                         edge_index = self.edge_index_clique_414
                         # Create edge_attr with value 1 for each edge
                         edge_attr = self.edge_attr_clique_414  # 1 attribute per edge
+                    elif intial_adj_method == "FN_const":
+                        assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
+                        edge_index = self.edge_index_clique_FN
+                        edge_attr = self.edge_attr_clique_FN  
+                        # put the features of all OTHERS nodes to 0
+                        # x_matrix --> (#nodes, #feat_nodes) --> put the correpsoding roes to 0
+                        x_matrix[self.nodes_not_in_FN] = 0
+                    elif intial_adj_method == "FN_edgeAttr_FC_window":
+                        assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
+                        edge_index = self.edge_index_clique_FN
+                        # put the features of all OTHERS nodes to 0
+                        x_matrix[self.nodes_not_in_FN] = 0
+                        # Edge attr build with FC of the current window --> no connecoty between region non in FN (removed rows from x_matrix)
+                        functional_connectivity_matrix = np.corrcoef(x_matrix) #(correlation between nodes' time series)
+                        # Iterate over each edge in edge_index and extract the corresponding value from the matrix
+                        edge_attr = []
+                        for i in range(edge_index.size(1)):  # Loop over each edge
+                            node1, node2 = edge_index[:, i].numpy()  # Extract node1 and node2 for the current edge
+                            edge_value = functional_connectivity_matrix[node1, node2]  # Extract the correlation value
+                            edge_attr.append(edge_value)
+                        #make tensor
+                        edge_index = torch.tensor(edge_index)
+                        edge_attr = torch.tensor(edge_attr)
 
                     #GRAPH LABEL
                     y = df_single_movie_sub_timepoint["label"].unique()[0]

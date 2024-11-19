@@ -105,7 +105,7 @@ class VIBGSL(torch.nn.Module):
 
             new_graph = Data(x=new_feature, edge_index=new_edge_index, edge_attr=new_edge_attr)
             new_graphs_list.append(new_graph)
-        loader = DataLoader(new_graphs_list, batch_size=len(new_graphs_list))
+        loader = DataLoader(new_graphs_list, batch_size=len(new_graphs_list)) #dataloader of one batch
         batch_data = next(iter(loader))
         node_embs, _ = self.backbone_gnn(batch_data.x, batch_data.edge_index)
         #print("Node Embeddings:", node_embs)  # Check for Nan
@@ -113,13 +113,24 @@ class VIBGSL(torch.nn.Module):
 
 
         mu = graph_embs[:, :self.IB_size]
-        std = F.softplus(graph_embs[:, self.IB_size:]-self.IB_size, beta=1)
+
+        ##############
+        # add by me
+        a = graph_embs[:, self.IB_size:]-self.IB_size
+        #print("before softplus")
+        #print(a)
+        a = torch.clamp(a, min=-10, max=10)
+        ##############
+
+        std = F.softplus(a, beta=1)
+
         ###############
         #add by me
         #print(f"mu: {mu},\n std{std}\n")
-        std = torch.clamp(std, min=1e-6)  # Ensure std is positive and not too small
-        mu = torch.clamp(mu, min=-10, max=10)  # Clip values of mu to a reasonable range
+        #std = torch.clamp(std, min=1e-6)  # Ensure std is positive and not too small
+        #mu = torch.clamp(mu, min=-10, max=10)  # Clip values of mu to a reasonable range
         ################
+
         new_graph_embs = self.reparametrize_n(mu, std, num_sample)
 
         logits = self.classifier(new_graph_embs)

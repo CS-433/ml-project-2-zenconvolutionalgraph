@@ -29,7 +29,7 @@ def my_train_and_evaluate(
         lr_decay_factor,
         lr_decay_step_size,
         weight_decay,
-        logger=None):
+        ):
     """
     Function to train and evaluate the model without cross-validation.
     
@@ -49,6 +49,7 @@ def my_train_and_evaluate(
     Returns:
         A dictionary with final validation loss, validation accuracy, and test accuracy.
     """
+
     # Data Loaders
     print("Create Dataloader...")
     train_loader = DataLoader(train_graphs_list, batch_size, shuffle=True, num_workers=4, pin_memory=True)
@@ -72,23 +73,17 @@ def my_train_and_evaluate(
             train_losses.append(train_loss)
             train_accs.append(train_acc)
 
-            # Test
-            test_cls_loss, test_KL_loss, test_loss, test_acc_1 = eval_VGIB_loss(model, test_loader)
-            #test_acc_2, data, graphs_list, new_graphs_list, pred_y = eval_VGIB_acc(model, test_loader)
-            test_acc_2 = 2
-            if test_acc_2 != test_acc_1: print("Problem test acc ")
-            test_accs.append(test_acc_2)
+            # Test --> "eval_VGIB_loss" and "eval_VGIB_acc" calculate same acc
+            test_cls_loss, test_KL_loss, test_loss, test_acc = eval_VGIB_loss(model, test_loader)
+            test_accs.append(test_acc)
             test_losses.append(test_loss)
-
-            # Interpretation --> for later
-            # test_acc_2, data, graphs_list, new_graphs_list, pred_y
 
             eval_info = {
                 'epoch': epoch,
                 'train_loss': train_loss,
                 'train_acc': train_acc,
                 'test_loss': test_loss,
-                'test_acc': test_acc_2,
+                'test_acc': test_acc,
             }
         else:
             raise ValueError(f'Unknown model: {model.__repr__()}')
@@ -104,21 +99,38 @@ def my_train_and_evaluate(
 
         # Free some space
         del train_cls_loss, train_KL_loss, train_loss, train_acc
-        del test_cls_loss, test_KL_loss, test_loss, test_acc_1
-        del test_acc_2#, data, graphs_list, new_graphs_list, pred_y
+        del test_cls_loss, test_KL_loss, test_loss, test_acc
         torch.cuda.empty_cache()
 
-
-
-    # Final Results
-    # final_val_loss = min(val_losses)
-    # final_val_acc = max(val_accs)
-    # final_test_acc = test_accs[-1]
-    # print(f"Final Results - Val Loss: {final_val_loss:.4f}, Val Accuracy: {final_val_acc:.3f}, Test Accuracy: {final_test_acc:.3f}")
-    
     return train_losses, train_accs, test_losses, test_accs
 
+def my_interpretation(
+        graphs_list,
+        model_trained,
+        batch_size,
+        ):
+    """
+    Function to interpret the learnt graphs structure
 
+    ATTENTION: all data will not fit in GPU.
+
+    Returns:
+        Learnt graphs
+    """
+    # Data Loaders
+    print("Create Dataloader...")
+    loader = DataLoader(graphs_list, batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    print("Dataloader Created")
+    
+    # Model
+    model_trained.to(device)
+
+    if model_trained.__repr__() in ['VIBGSL']:
+
+        # Returns grpahs of all datalloader (so all dataset,i.e. each batch)
+        acc, data, graphs_list, new_graphs_list, pred_y = eval_VGIB_acc(model_trained, loader)
+
+    return graphs_list, new_graphs_list, pred_y
 
 ########################################################################################
 ### ORIGINAL FUNCTIONS
@@ -139,7 +151,8 @@ def train_VGIB(model, optimizer, loader):
         (mu, std), logits, _, _ = model(data)
         class_loss = F.cross_entropy(logits, data.y).div(math.log(2))
         KL_loss = -0.5 * (1 + 2 * std.log() - mu.pow(2) - std.pow(2)).sum(1).mean().div(math.log(2))
-
+        #print(logits)
+        #print(std)
         loss = class_loss + model.beta * KL_loss
         loss.backward()
         total_loss += loss.item() * num_graphs(data)
@@ -161,10 +174,17 @@ def eval_VGIB_acc(model, loader):
         data = data.to(device)
         with torch.no_grad():
             _, logits, tmp_graphs_list, tmp_new_graphs_list = model(data)
-            graphs_list += tmp_graphs_list
+
+            # ATTENTION: We dont care to save old graphs
+            #graphs_list += tmp_graphs_list
+
+            # ATTENTION: maybe put on cpu
             new_graphs_list += tmp_new_graphs_list
+
             pred = logits.max(1)[1]
+
         correct += pred.eq(data.y.view(-1)).sum().item()
+
     return correct / len(loader.dataset), data, graphs_list, new_graphs_list, pred
 
 
@@ -178,7 +198,7 @@ def eval_VGIB_loss(model, loader):
         data = data.to(device)
         with torch.no_grad():
             (mu, std), logits, _, _ = model(data)
-            pred = logits.max(1)[1]
+            pred = logits.max(1)[1] #not took before softmax??
         correct += pred.eq(data.y.view(-1)).sum().item()
         class_loss = F.cross_entropy(logits, data.y).div(math.log(2))
         KL_loss = -0.5 * (1 + 2 * std.log() - mu.pow(2) - std.pow(2)).sum(1).mean().div(math.log(2))
