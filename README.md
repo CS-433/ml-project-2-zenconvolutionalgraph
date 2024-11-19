@@ -61,15 +61,18 @@ these intila grpah concctivies will be the refined using theicjek like GSL; GAT,
 
 
 saturday:
-  - Open GSL
   - OPTIMIZATION: ren VIB and our models with
     - train-test split vert and hor
     - hyperparmaters
     - model backbone
+  - Open GSL
   - save full adj matrices and not just mean of same emo
   - PREDICT 3D VEC
   - calculate accuracy per class
   - read article michael on movie dataset used
 
-
 # presenation:  17th tuesday 14:00 --> 10 min + 5 min
+
+# VIB MODEL
+irrelevant feature mascking 
+IB-Graph leant

@@ -16,7 +16,7 @@ class DatasetEmo():
     def __init__(self,
                 df, #df with mvoies to use
                 node_feat = "singlefmri", #"singlefmri", "symmetricwindow", "pastwindow"
-                intial_adj_method = "clique",
+                initial_adj_method = "clique",
                     # "clique"
                     #FC dynamic:  "fcmovie", "fcwindow"
                     #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
@@ -93,19 +93,19 @@ class DatasetEmo():
 
                     #NODE CONNECTIVITY
                         #attnetion df alredy ordered before by vindex
-                    if intial_adj_method == "clique":
+                    if initial_adj_method == "clique":
                         # Each node is connected to every other node (both directions)
                         edge_index = self.edge_index_clique_414
                         # Create edge_attr with value 1 for each edge
                         edge_attr = self.edge_attr_clique_414  # 1 attribute per edge
-                    elif intial_adj_method == "FN_const":
+                    elif initial_adj_method == "FN_const":
                         assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
                         edge_index = self.edge_index_clique_FN
                         edge_attr = self.edge_attr_clique_FN  
                         # put the features of all OTHERS nodes to 0
                         # x_matrix --> (#nodes, #feat_nodes) --> put the correpsoding roes to 0
                         x_matrix[self.nodes_not_in_FN] = 0
-                    elif intial_adj_method == "FN_edgeAttr_FC_window":
+                    elif initial_adj_method == "FN_edgeAttr_FC_window":
                         assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
                         edge_index = self.edge_index_clique_FN
                         # put the features of all OTHERS nodes to 0
