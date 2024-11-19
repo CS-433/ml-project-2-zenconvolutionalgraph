@@ -80,11 +80,8 @@ NO --> decision made with the lab
       - knn   OK --> C
       - GCN   OK --> Z
       - FNN   OK --> G
-
-
     - lots of simple ones
         - GAT   OK --> G
-        - FNN   OK --> G
         - transf   --> 
         - RF       --> 
         - OpenGSL  --> C
@@ -94,12 +91,12 @@ NO --> decision made with the lab
 
 
 Sunday: 10th  8:00
-  - by then:
-    - gnn Z
+
     - openGSL C
-    - OK chnage GAT G
-  - OK: implent clique for lymbic
-  - OK implementation + interpetation VIB
-tuesday: 19th 11:00
-  - implement VIB https://github.com/RingBDStack/VIB-GSL
+satirday:
+  - VIB
+    - spli train tets hor or ver
+    - try doffert hyeprpaltee 
+    - try differt intiial connecotivty
+  - for single models
 presenation:  17th tuesday 14:00 --> 10 min + 5 min
