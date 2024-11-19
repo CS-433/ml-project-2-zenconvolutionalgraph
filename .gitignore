@@ -2,3 +2,7 @@ scripts/__pycache__/*
 data/*
 old
 old/*
+!data/assets
+!data/assets/*
+!data/results
+data/results/VIB/*

@@ -130,7 +130,7 @@ def my_interpretation(
         # Returns grpahs of all datalloader (so all dataset,i.e. each batch)
         acc, data, graphs_list, new_graphs_list, pred_y = eval_VGIB_acc(model_trained, loader)
 
-    return graphs_list, new_graphs_list, pred_y
+    return acc, new_graphs_list, pred_y
 
 ########################################################################################
 ### ORIGINAL FUNCTIONS
