@@ -6,8 +6,8 @@ from torch import tensor
 from torch.optim import Adam
 from sklearn.model_selection import StratifiedKFold
 from torch_geometric.data import Dataset, Batch, DataLoader, DenseDataLoader as DenseLoader
-from .gsl import *
-from .utils import *
+from gsl import *
+from utils import *
 import os
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -128,11 +128,45 @@ def my_interpretation(
     if model_trained.__repr__() in ['VIBGSL']:
 
         # Returns grpahs of all datalloader (so all dataset,i.e. each batch)
-        acc, data, graphs_list, new_graphs_list, pred_y = eval_VGIB_acc(model_trained, loader)
+        acc, data, graphs_list, new_graphs_list, pred_y = my_eval_VGIB_acc(model_trained, loader)
 
         del data, graphs_list
 
     return acc, new_graphs_list, pred_y
+
+def my_eval_VGIB_acc(model, loader):
+    model.eval()
+
+    correct = 0
+    #graphs_list = []
+    new_graphs_list = []
+    all_preds = []
+    for data in loader:
+        data = data.to(device)
+        with torch.no_grad():
+            _, logits, tmp_graphs_list, tmp_new_graphs_list = model(data)
+
+            # ATTENTION: We dont care to save old graphs
+            #graphs_list += tmp_graphs_list
+
+            # ATTENTION: put on cpu
+            new_graphs_list += [g.cpu() for g in tmp_new_graphs_list]
+
+            pred = logits.max(1)[1] #here corresponds to the predictions for only the last batch
+
+            all_preds.append(pred.cpu())
+
+
+        correct += pred.eq(data.y.view(-1)).sum().item()
+
+        del data, logits, tmp_graphs_list, pred
+        torch.cuda.empty_cache()
+
+    # Concatenate all predictions into a single tensor
+    all_preds = torch.cat(all_preds, dim=0)
+    print(f"Shape new_graphs_list {len(new_graphs_list)}\nSahpe Prediction {len(all_preds)}")
+
+    return correct / len(loader.dataset), new_graphs_list, all_preds
 
 ########################################################################################
 ### ORIGINAL FUNCTIONS
@@ -177,10 +211,8 @@ def eval_VGIB_acc(model, loader):
         with torch.no_grad():
             _, logits, tmp_graphs_list, tmp_new_graphs_list = model(data)
 
-            # ATTENTION: We dont care to save old graphs
-            #graphs_list += tmp_graphs_list
+            graphs_list += tmp_graphs_list
 
-            # ATTENTION: maybe put on cpu
             new_graphs_list += tmp_new_graphs_list
 
             pred = logits.max(1)[1]

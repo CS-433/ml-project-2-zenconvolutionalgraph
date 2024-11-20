@@ -3,8 +3,8 @@ import torch.nn.functional as F
 from torch.nn import Linear, ReLU, Dropout
 from torch.autograd import Variable
 from torch_geometric.data import Data
-from .utils import *
-from .layers import *
+from utils import *
+from layers import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

@@ -8,8 +8,8 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions.relaxed_bernoulli import RelaxedBernoulli, LogitRelaxedBernoulli
 import math
-from .utils import *
-from .backbone import *
+from utils import *
+from backbone import *
 
 
 VERY_SMALL_NUMBER = 1e-12
