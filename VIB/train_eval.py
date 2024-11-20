@@ -128,9 +128,7 @@ def my_interpretation(
     if model_trained.__repr__() in ['VIBGSL']:
 
         # Returns grpahs of all datalloader (so all dataset,i.e. each batch)
-        acc, data, graphs_list, new_graphs_list, pred_y = my_eval_VGIB_acc(model_trained, loader)
-
-        del data, graphs_list
+        acc, new_graphs_list, pred_y = my_eval_VGIB_acc(model_trained, loader)
 
     return acc, new_graphs_list, pred_y
 

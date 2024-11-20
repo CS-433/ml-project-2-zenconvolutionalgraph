@@ -93,7 +93,7 @@ args = SimpleNamespace(
 
     ### VIB TRAINING
     folds=10,
-    epochs=1,
+    epochs=10,
     lr=0.0001,
     lr_decay_factor=0.5,
     lr_decay_step_size=50,
@@ -244,7 +244,7 @@ for g, label in zip(new_graphs_list_test, y_test):
 # # Save Results
 
 
-RESULT_DIR = Path(f"data/results/VIB/{int(np.ceil(acc_test*100))}")
+RESULT_DIR = Path(f"data/results/VIB/{int(acc_test*10000)}")
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 # Convert SimpleNamespace to dictionary
