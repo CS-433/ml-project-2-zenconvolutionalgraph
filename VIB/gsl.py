@@ -119,7 +119,7 @@ class VIBGSL(torch.nn.Module):
         a = graph_embs[:, self.IB_size:]-self.IB_size
         #print("before softplus")
         #print(a)
-        a = torch.clamp(a, min=-10, max=10)
+        a = torch.clamp(a, min=-50, max=50)
         ##############
 
         std = F.softplus(a, beta=1)

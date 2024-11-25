@@ -9,6 +9,8 @@ from torch_geometric.data import Dataset, Batch, DataLoader, DenseDataLoader as 
 from gsl import *
 from utils import *
 import os
+from tqdm import tqdm
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.manual_seed(6789)
@@ -93,9 +95,10 @@ def my_train_and_evaluate(
             for param_group in optimizer.param_groups:
                 param_group['lr'] *= lr_decay_factor
         
-        # Logging every 10 epochs
+        # Logging
         if epoch % 1 == 0:
             print(eval_info)
+            print()
 
         # Free some space
         del train_cls_loss, train_KL_loss, train_loss, train_acc
@@ -177,9 +180,9 @@ def train_VGIB(model, optimizer, loader):
     total_class_loss = 0
     total_KL_loss = 0
     correct = 0
-    for i, data in enumerate(loader):
-        if (i+1)%100 == 0:
-            print(f"\tbatch n {i+1}")
+
+    for data in tqdm(loader, desc="Processing Batches", unit="batch"):
+ 
         optimizer.zero_grad()
         data = data.to(device)
         (mu, std), logits, _, _ = model(data)

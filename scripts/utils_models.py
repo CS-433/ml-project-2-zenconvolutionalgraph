@@ -10,6 +10,8 @@ import os
 from torch_geometric.data import Batch
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
+
 
 class DatasetEmo():
 
@@ -68,9 +70,9 @@ class DatasetEmo():
                 #ATTENTION: ORDER ROWS BY VINDEX, SO SURE THAT INDEX ARE INCREASINGLY
                 df_single_movie_sub = df_single_movie_sub.sort_values(by="vindex")
 
-                for timepoint in timepoints:
+                for timepoint in tqdm(timepoints, desc=f"Processing {movie} {sub}", unit="timepoint"):
 
-                    print(f"Creating the graph {movie} {sub} {timepoint-timepoints[0]}/{len(timepoints)}")
+                    #print(f"Creating the graph {movie} {sub} {timepoint-timepoints[0]}/{len(timepoints)}")
 
                     # Select data of single timepoint
                     df_single_movie_sub_timepoint = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]
