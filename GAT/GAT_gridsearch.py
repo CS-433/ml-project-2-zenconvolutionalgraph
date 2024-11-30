@@ -8,19 +8,21 @@ from datetime import datetime
 # Define hyperparameter grid
 param_grid = {
 
-    "type_prediction": ["1"],
+    "type_prediction": ["all_emo"], #all_emo, only ione emo e.e. "1"
+    "type_dataset": ["balanced"], #balanced, unbalanced
+    "how_many_movies": [1], #how mna movies use to test the model, 1, 6, ...
 
     # DATASET PARAMETERS
     "num_classes": [13],  # Fixed value
     "type_labels": ["single"],  
-    "batch_size": [32],
-    "test_batch_size": [32],
+    "batch_size": [8],
+    "test_batch_size": [8],
     "percentage_train": [0.8],
     "percentage_val": [0.0],
-    "test_train_splitting_mode": ["Vertical", "Horizontal"],
+    "test_train_splitting_mode": ["Vertical"],
     "window_half_size": [5],
     "node_feat": ["symmetricwindow"],
-    "initial_adj_method": ["clique", "FN_edgeAttr_FC_window","FN_const"],
+    "initial_adj_method": ["clique"],
     "FN": ["Limbic"],
 
     # TRAINING PARAMETERS

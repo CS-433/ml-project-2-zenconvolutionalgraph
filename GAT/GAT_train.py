@@ -37,6 +37,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 print(torch.__version__)
 
+gpu_mem()
+
 ################################
 ### Hyperparamters
 ################################
@@ -57,21 +59,36 @@ args = SimpleNamespace(**params)
 
 print(args)
 
+gpu_mem()
+
 
 ################################
 ### Load all movies
 ################################
 
-if args.type_prediction == "all_emo":
-    df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_{args.num_classes}_{args.type_labels}.csv")
-else: #single emo
+if args.type_dataset == "balanced":
     df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_13_single_balanced.csv")
+if args.type_dataset == "unbalanced":
+    df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_{args.num_classes}_{args.type_labels}.csv")
+
+
+
+if args.type_prediction == "all_emo":
+    pass
+else: #single emo
     # all oher emo gain specific class "77"
+    # problem now of unbalance
     df_all_movies.loc[~ df_all_movies.label.isin([int(x) for x in args.type_prediction]), "label"] = 77
 
 
-#JUST FOR PROVA: select subset of movies
-#df_all_movies = df_all_movies[df_all_movies.movie.isin([0,4])]
+if args.how_many_movies == 1:
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([0,9])]
+if args.how_many_movies == 6:
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([0,1,2,3,5,6,7,4,9])]
+else: #use all
+    pass
+
+gpu_mem()
 
 ################################
 ### Split in Train, Validation, Test
@@ -101,6 +118,8 @@ elif args.test_train_splitting_mode == "MovieRest":
     df_rest = pd.read_csv("data/raw/rest/Rest_compiled414_processed.csv")
     df_train, df_test = split_train_test_rest_classification(df_all_movies, df_rest)
     df_val = df_train[df_train.id == 99] #make sure to be empty
+
+gpu_mem()
 
 ################################
 ### Create Datasets
@@ -138,6 +157,8 @@ with open(os.devnull, "w") as fnull:
             sizewind = args.window_half_size
         )
 
+gpu_mem()
+
 # Extarct the list of graphs of each dataset
 graphs_list_train = dataset_train.get_graphs_list()
 graphs_list_val = dataset_val.get_graphs_list()
@@ -160,11 +181,21 @@ print(f"N batches in train: {num_batches_train}")
 print(f"N batches in val: {num_batches_val}")
 print(f"N batches in test: {num_batches_test}")
 
+gpu_mem()
+
+# for idx, data in enumerate(graphs_list_train):
+#     if data.x.shape[1] != 11:
+#         print(f"Graph {idx}:")
+#         print(f"  Node Features: {data.x.shape if data.x is not None else 'None'}")
+#         print(f"  Edge Index: {data.edge_index.shape if data.edge_index is not None else 'None'}")
+#         print(f"  Edge Attributes: {data.edge_attr.shape if data.edge_attr is not None else 'None'}")
+
 ################################
 ### Instantiate GAT
 ################################
 
 n_feat_per_node = graphs_list_train[0].x.shape[1]
+print(f"n_feat_per_node: {n_feat_per_node}")
 
 MyGat = GATModel(
     input_dim = n_feat_per_node, 
@@ -175,8 +206,14 @@ MyGat = GATModel(
 
 MyGat = MyGat.to(device)
 
+gpu_mem()
+
 #print(next(MyGat.parameters()).device)
 #print(torch.cuda.memory_summary(device=None, abbreviated=False))
+
+# Calculate the total number of trainable parameters
+total_trainable_params = sum(p.numel() for p in MyGat.parameters() if p.requires_grad)
+print(f"\nTotal number of trainable parameters: {total_trainable_params}\n")
 
 
 ################################
@@ -192,6 +229,8 @@ best_model, results = GAT_train(
     num_epochs=args.epochs, 
     learning_rate=args.lr
 )
+
+gpu_mem()
 
 ################################
 ### Predict Labels Using best model
@@ -212,7 +251,7 @@ test_accs = results["test_accuracies"]
 best_test_accuracy = results["best_test_accuracy"]
 
 # Create Folder
-RESULT_DIR = Path(f"data/results/GAT/{args.type_prediction}/{int(best_test_accuracy*10000)}")
+RESULT_DIR = Path(f"data/results/GAT/{args.type_dataset}/{args.how_many_movies}/{args.type_prediction}/{int(best_test_accuracy*10000)}")
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 # Convert SimpleNamespace to dictionary

@@ -5,20 +5,27 @@ from itertools import product
 from pathlib import Path
 from datetime import datetime
 
+# CHECK GPUS PERIODICALLY: watch -n 1 nvidia-smi
+
+
 # Define hyperparameter grid
 param_grid = {
 
-    "type_prediction": ["1"],
+    "type_prediction": ["all_emo"], #all_emo, only ione emo e.e. "1"
+    "type_dataset": ["balanced"], #balanced, unbalanced
+    "how_many_movies": [1], #how mna movies use to test the model, 1, 6, ...
+    "gpu_id" : ["1"], #0,1,2,3
+
 
     # DATASET PARAMETERS
-    "num_classes": [2],  # Attention depends on "type_prediction": 13 --> all_emo
+    "num_classes": [13],  # Attention depends on "type_prediction": 13 --> all_emo
     "type_labels": ["single"],  
-    "batch_size": [32],
-    "test_batch_size": [32],
+    "batch_size": [8],
+    "test_batch_size": [8],
     "percentage_train": [0.8],
     "percentage_val": [0.0],
     "test_train_splitting_mode": ["Vertical"],
-    "window_half_size": [5],
+    "window_half_size": [6], #10, 12
     "node_feat": ["symmetricwindow"],
     "initial_adj_method": ["clique"],
     "FN": ["Limbic"],
@@ -26,22 +33,22 @@ param_grid = {
     # VIB PARAMETERS
     "dataset_name": ["EMOTION"],  # Fixed value
     "backbone": ["GAT"],
-    "hidden_dim": [16],
-    "num_layers": [2],
+    "hidden_dim": [128],
+    "num_layers": [4],
     "graph_type": ["prob"],
     "top_k": [20],  # For KNN
     "epsilon": [0.3],  # For epsiloNN
     "graph_metric_type": ["mlp"],
     "num_per": [13],
-    "feature_denoise": [False],
+    "feature_denoise": [True],
     "repar": [False],
-    "beta": [0.001],
-    "IB_size": [16],
+    "beta": [0.00001],
+    "IB_size": [16], #16, 64
     "graph_skip_conn": [0.0],
     "graph_include_self": [True],
 
     # VIB TRAINING PARAMETERS
-    "epochs": [5],
+    "epochs": [10],
     "lr": [0.0001],
     "lr_decay_factor": [0.5],
     "lr_decay_step_size": [50],

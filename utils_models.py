@@ -314,8 +314,21 @@ def create_feature_label_tensors_for_FNN(df, sizewind=4):
 
     return X, y
 
+def gpu_mem():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
 
+        # Memory allocated on the current GPU device
+        allocated_memory = torch.cuda.memory_allocated(device)
+        
+        # Memory reserved (cached) by PyTorch on the current GPU device
+        reserved_memory = torch.cuda.memory_reserved(device)
 
+        # Print memory in bytes, you can divide by (1024**2) to convert to MB
+        print(f"\nMemory Allocated: {allocated_memory / (1024**2):.2f} MB")
+        print(f"Memory Reserved: {reserved_memory / (1024**2):.2f} MB\n")
+    else:
+        print("No GPU available")
 
 
 

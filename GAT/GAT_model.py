@@ -92,7 +92,8 @@ def GAT_train(
     train_loader, 
     test_loader, 
     num_epochs=10, 
-    learning_rate=0.001
+    learning_rate=0.001, 
+    accumulation_steps=4  # Number of batches to accumulate gradients
 ):
     # Find device where the model is
     device = next(model.parameters()).device
@@ -118,13 +119,13 @@ def GAT_train(
         correct_train = 0
         total_train_samples = 0
 
+        optimizer.zero_grad()  # Zero gradients before starting an epoch
+
         # Progress bar for the training epoch
         with tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]", unit="batch", leave=True) as batch_bar:
-            for batch in batch_bar:
+            for batch_idx, batch in enumerate(batch_bar):
                 # Move batch to device
                 batch = batch.to(device)
-
-                optimizer.zero_grad()  # Zero the gradients
 
                 # Forward pass: Get predictions
                 out = model(batch)  # Ensure model outputs logits (not softmax)
@@ -133,31 +134,35 @@ def GAT_train(
                 loss = criterion(out, batch.y)
 
                 # Backward pass: Compute gradients
+                loss = loss / accumulation_steps  # Scale the loss
                 loss.backward()
 
-                # Update model parameters
-                optimizer.step()
-
                 # Accumulate loss for logging
-                total_train_loss += loss.item()
+                total_train_loss += loss.item() * accumulation_steps
 
                 # Calculate accuracy
                 _, predicted = torch.max(out, dim=1)  # Predicted classes
                 correct_train += (predicted == batch.y).sum().item()
                 total_train_samples += batch.y.size(0)
 
+                # Perform optimizer step after accumulation_steps
+                if (batch_idx + 1) % accumulation_steps == 0 or (batch_idx + 1) == len(train_loader):
+                    optimizer.step()
+                    optimizer.zero_grad()
+
                 # GPU memory monitoring
                 if device.type == "cuda":
                     current_memory = torch.cuda.memory_allocated(device) / 1e6  # Convert bytes to MB
                     peak_memory = torch.cuda.max_memory_allocated(device) / 1e6
                     batch_bar.set_postfix(
-                        loss=loss.item(),
+                        loss=loss.item() * accumulation_steps,
                         mem_used=f"{current_memory:.2f}MB",
                         peak_mem=f"{peak_memory:.2f}MB"
                     )
 
                 # Clean up memory
                 del batch, out, loss
+                torch.cuda.empty_cache()  # Clear unused memory
 
         # Calculate average train loss and accuracy
         epoch_train_loss = total_train_loss / len(train_loader)

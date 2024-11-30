@@ -13,10 +13,13 @@ scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../scrip
 sys.path.append(scripts_path)
 scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../VIB'))
 sys.path.append(scripts_path)
-from models import *
+scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(scripts_path)
 from utils_models import *
 from train_eval import *
 import gsl
+from torchsummary import summary
+
 
 import pandas as pd
 from math import ceil
@@ -32,11 +35,6 @@ import argparse
 import torch
 import torch.optim as optim
 from torch.utils.checkpoint import checkpoint
-
-print(torch.cuda.is_available())
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
-print(torch.__version__)
 
 #################
 ### Set Random Seeds
@@ -56,7 +54,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--params", type=str, help="Path to JSON file containing parameters.")
 args_cli = parser.parse_args()
 
-if args_cli.params != None:
+if args_cli.params != None: # In case passed from outer scirpt
     print(f"\nParamters from {args_cli.params}")
     # Load parameters from JSON file
     with open(args_cli.params, "r") as f:
@@ -68,7 +66,10 @@ else:
     print(f"\nManually Entered parameters.")
     args = SimpleNamespace(
 
-        type_prediction = "1", #single_emo --> $N, all_emo, rest_emo
+        type_prediction =  "all_emo", #all_emo, only ione emo e.e. "1"
+        type_dataset =  "balanced", #balanced, unbalanced
+        how_many_movies =  1, #how mna movies use to test the model, 1, 6, ...
+        gpu_id = "0",
 
         ### DATASET PARAMETERS
         num_classes=13, #number of emotions to predict
@@ -133,22 +134,58 @@ else:
 print(args)
 
 #################
+###  Choose GPU to use
+#################
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+if device.type == "cuda":
+    print(f"Device name: {torch.cuda.get_device_name(0)}")
+    #If you set CUDA_VISIBLE_DEVICES=2, then GPU 2 (from the system’s perspective) becomes GPU 0 from the script's perspective.
+print(torch.__version__)
+
+# # Get the list of all GPUs
+# num_gpus = torch.cuda.device_count()
+
+# # Find the first free GPU
+# for gpu_id in range(num_gpus):
+#     gpu_memory = torch.cuda.mem_get_info(gpu_id)  # Free and total memory (in bytes)
+#     free_memory, total_memory = gpu_memory
+#     print(f"GPU {gpu_id}: Free {free_memory // (1024**2)} MiB / Total {total_memory // (1024**2)} MiB")
+    
+#     if free_memory > 2000 * 1024**2:  # Use threshold (e.g., 2000 MiB free)
+#         print(f"Using GPU {gpu_id}")
+#         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+#         break
+
+# # Proceed with your code
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# print(f"Assigned device: {device}")
+
+#################
 ###  Load df all Movies
 #################
 
-if args.type_prediction == "all_emo":
-    df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_{args.num_classes}_{args.type_labels}.csv")
-else: #single emo
+if args.type_dataset == "balanced":
     df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_13_single_balanced.csv")
+if args.type_dataset == "unbalanced":
+    df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_{args.num_classes}_{args.type_labels}.csv")
+
+
+if args.type_prediction == "all_emo":
+    pass
+else: #single emo
     # all oher emo gain specific class "77"
+    # problem now of unbalance
     df_all_movies.loc[~ df_all_movies.label.isin([int(x) for x in args.type_prediction]), "label"] = 77
 
 
-############
-#JUST FOR PROVA: select subset of movies
-#df_all_movies = df_all_movies[df_all_movies.movie.isin([0,3])]
-#df_all_movies = df_all_movies[df_all_movies.label.isin([3])]
-############
+if args.how_many_movies == 1:
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([9,13])]
+if args.how_many_movies == 6:
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([0,1,2,3,5,6,7,4,9])]
+else: #use all
+    pass
 
 #################
 ### Split in Train, Validation, Test
@@ -157,6 +194,7 @@ else: #single emo
 print(f"Splitting {args.test_train_splitting_mode}...")
 
 if args.test_train_splitting_mode == "Vertical":
+    # THis is best choice if we use unbalanced dataset
     #df_train, df_test = split_train_test_vertically(
     #    df_all_movies, 
     #    test_movies_dict = {"BigBuckBunny": 2, "FirstBite": 4, "Superhero": 9})
@@ -164,8 +202,10 @@ if args.test_train_splitting_mode == "Vertical":
     # In case use balanced dataset
     df_train, df_test = split_train_test_vertically(
         df_all_movies, 
-        test_movies_dict = {"FirstBite": 4, "Superhero": 9, "YouAgain": 13})
+        #test_movies_dict = {"FirstBite": 4, "Superhero": 9, "YouAgain": 13})
+        test_movies_dict = {"FirstBite": 4, "YouAgain": 13})
 
+    
     df_val = df_train[df_train.id == 99] #make sure to be empty
 elif args.test_train_splitting_mode == "Horizontal":
     df_train, df_val, df_test = split_train_val_test_horizontally(
@@ -241,6 +281,10 @@ model = gsl.VIBGSL(
             args.num_classes)
 print(model.__repr__())
 
+# Calculate the total number of trainable parameters
+total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"\nTotal number of trainable parameters: {total_trainable_params}\n")
+
 #################
 ### Train
 #################
@@ -248,6 +292,7 @@ print(model.__repr__())
 # Useful if the code get some strange anomaly
 torch.autograd.set_detect_anomaly(True)
 
+# the model is chnaged in place
 train_losses, train_accs, test_losses, test_accs = my_train_and_evaluate(
     train_graphs_list = graphs_list_train,
     test_graphs_list = graphs_list_test,
@@ -265,6 +310,12 @@ train_losses, train_accs, test_losses, test_accs = my_train_and_evaluate(
 ### Evaluate on test
 #################
 
+# Extarct accuracy, learnt grpahs and predicted lablled in train set
+acc_train, new_graphs_list_train, pred_y_train = my_interpretation(
+        graphs_list = graphs_list_train,
+        model_trained = model,
+        batch_size = args.batch_size,
+)
 
 # Extarct accuracy, learnt grpahs and predicted lablled in test set
 acc_test, new_graphs_list_test, pred_y_test = my_interpretation(
@@ -274,6 +325,8 @@ acc_test, new_graphs_list_test, pred_y_test = my_interpretation(
 )
 
 # Extarct ground.truth labels
+pred_y_train = [y.item() for y in pred_y_train]
+y_train = [g.y.item() for g in graphs_list_train]
 pred_y_test = [y.item() for y in pred_y_test]
 y_test = [g.y.item() for g in graphs_list_test]
 
@@ -291,9 +344,13 @@ for g, label in zip(new_graphs_list_test, y_test):
 ### Save Results
 #################
 
-best_acc = max(test_accs)
-print(f"Best Acc {best_acc}")
-RESULT_DIR = Path(f"data/results/VIB/{args.type_prediction}/{int(best_acc*10000)}")
+# best_acc_train = max(train_accs)
+# best_acc_test = max(test_accs)
+print(f"Best Acc Train: {acc_train}\nBest Acc Tets: {acc_test}")
+
+# Create Dir results
+RESULT_DIR = Path(f"data/results/VIB/{args.type_dataset}/{args.how_many_movies}/{args.type_prediction}/{int(acc_train*10000)}-{int(acc_test*10000)}")
+print(RESULT_DIR)
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 # Convert SimpleNamespace to dictionary
@@ -302,25 +359,38 @@ results_dict = vars(args)
 results_dict.update(
     {
         "train_losses": train_losses,
-        "train_accs": train_accs,
         "test_losses": test_losses,
+
+        "train_accs": train_accs,
         "test_accs": test_accs, 
-        "acc_test": acc_test,
+
+        "final_acc_train": acc_train,
+        "final_acc_test": acc_test,
+
+        "pred_y_train": pred_y_train, 
         "pred_y_test": pred_y_test, 
+
+        "y_train": y_train,
         "y_test": y_test,
     }
 )
+
+# Save dict with hyperpetes and results
 with open(os.path.join(RESULT_DIR, 'results.json'), 'w') as f:
     json.dump(results_dict, f, indent=4)
-
-# Save test adk mayrices
-np.savez_compressed(os.path.join(RESULT_DIR, 'adj_test.npz'), **dict_new_graphs_list_test_adj, labels=y_test)
 
 # Save the entire model (architecture + weights)
 torch.save(model, os.path.join(RESULT_DIR, 'full_model.pth'))
 
+# Save test adk mayrices
+#np.savez_compressed(os.path.join(RESULT_DIR, 'adj_test.npz'), **dict_new_graphs_list_test_adj, labels=y_test)
 
-# For future Loading
+
+
+
+
+
+# For future Loading of the model
 #model = torch.load('full_model.pth')
 #model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
