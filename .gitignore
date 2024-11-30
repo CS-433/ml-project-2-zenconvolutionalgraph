@@ -6,3 +6,4 @@ old/*
 !data/assets/*
 !data/results
 data/results/VIB/*
+data/results/GAT/*
