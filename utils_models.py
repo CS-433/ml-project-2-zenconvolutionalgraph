@@ -13,6 +13,46 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 
+def custom_corrcoef(x_matrix):
+    # Convert x_matrix to numpy if it's a PyTorch tensor
+    if isinstance(x_matrix, torch.Tensor):
+        x_matrix = x_matrix.numpy()
+
+    # Identify valid (non-NaN and non-zero) values
+    valid_mask = ~np.isnan(x_matrix) & (x_matrix != 0)
+
+    # Identify rows that are fully zero or entirely invalid
+    row_is_zero = np.all(x_matrix == 0, axis=1)
+
+    # Compute the number of valid elements per row
+    valid_counts = valid_mask.sum(axis=1)
+
+    # Compute sums of valid elements per row
+    row_sums = np.nansum(np.where(valid_mask, x_matrix, 0), axis=1)
+
+    # Safely compute row means
+    row_means = np.zeros_like(row_sums)
+    valid_rows = valid_counts > 0  # Only rows with valid data
+    row_means[valid_rows] = row_sums[valid_rows] / valid_counts[valid_rows]
+
+    # Subtract the row means (mean-centering)
+    centered = np.where(valid_mask, x_matrix - row_means[:, None], 0)
+
+    # Compute dot products and norms
+    dot_products = np.dot(centered, centered.T)
+    norms = np.sqrt(np.sum(centered**2, axis=1))
+    norm_products = np.outer(norms, norms)
+
+    # Handle cases where norm_products is zero
+    with np.errstate(divide='ignore', invalid='ignore'):  # Suppress warnings temporarily
+        corr_matrix = np.where(norm_products > 0, dot_products / norm_products, 0)
+
+    # Set correlations involving rows that are fully zero to 0
+    corr_matrix[row_is_zero, :] = 0
+    corr_matrix[:, row_is_zero] = 0
+
+    return corr_matrix
+
 class DatasetEmo():
 
     def __init__(self,
@@ -43,10 +83,17 @@ class DatasetEmo():
         #for clique FN
         df_FN = pd.read_csv(os.path.join(FN_paths, f"FN_{FN}.csv")) #remember that the "Sub" FN is always present
         nodes_in_FN = df_FN[df_FN.is_in_FN == 1].vindex.values # Extract nodes that are in the FN subset
+        self.nodes_in_FN = nodes_in_FN
         self.nodes_not_in_FN = df_FN[~(df_FN.is_in_FN == 1)].vindex.values
         edge_index_clique_FN = torch.combinations(torch.tensor(nodes_in_FN), r=2).t()  # Pairwise combinations
         self.edge_index_clique_FN = torch.cat([edge_index_clique_FN, edge_index_clique_FN.flip(0)], dim=1)  # Add both directions
         self.edge_attr_clique_FN = torch.ones(self.edge_index_clique_FN.size(1), 1)  # 1 attribute per edge
+        # For only self loops (indentity adjancy matrix)
+        self.edge_index_I = torch.tensor([[i for i in range(414)],  # Source nodes
+                           [i for i in range(414)]],  # Target nodes
+                          dtype=torch.long)
+        self.edge_attr_I = torch.ones((414, 1))
+        
 
         # Ectarct movies
         movies = df["movie"].unique()
@@ -112,8 +159,14 @@ class DatasetEmo():
                         edge_index = self.edge_index_clique_FN
                         # put the features of all OTHERS nodes to 0
                         x_matrix[self.nodes_not_in_FN] = 0
+                        #print(self.nodes_not_in_FN)
+                        #print(x_matrix)
+                        #print(x_matrix.shape)
                         # Edge attr build with FC of the current window --> no connecoty between region non in FN (removed rows from x_matrix)
-                        functional_connectivity_matrix = np.corrcoef(x_matrix) #(correlation between nodes' time series)
+                        #functional_connectivity_matrix = np.corrcoef(x_matrix) #(correlation between nodes' time series)
+                        functional_connectivity_matrix = custom_corrcoef(x_matrix)
+                        #print(functional_connectivity_matrix)
+                        #print(functional_connectivity_matrix.shape)
                         # Iterate over each edge in edge_index and extract the corresponding value from the matrix
                         edge_attr = []
                         for i in range(edge_index.size(1)):  # Loop over each edge
@@ -121,8 +174,11 @@ class DatasetEmo():
                             edge_value = functional_connectivity_matrix[node1, node2]  # Extract the correlation value
                             edge_attr.append(edge_value)
                         #make tensor
-                        edge_index = torch.tensor(edge_index)
+                        edge_index = edge_index# already a tensor
                         edge_attr = torch.tensor(edge_attr)
+                    elif initial_adj_method == "I": # only self loops
+                        edge_index = self.edge_index_I
+                        edge_attr = self.edge_attr_I
 
                     #GRAPH LABEL
                     y = df_single_movie_sub_timepoint["label"].unique()[0]

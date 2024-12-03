@@ -37,8 +37,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 print(torch.__version__)
 
-gpu_mem()
-
 ################################
 ### Hyperparamters
 ################################
@@ -59,7 +57,7 @@ args = SimpleNamespace(**params)
 
 print(args)
 
-gpu_mem()
+#gpu_mem()
 
 
 ################################
@@ -82,13 +80,11 @@ else: #single emo
 
 
 if args.how_many_movies == 1:
-    df_all_movies = df_all_movies[df_all_movies.movie.isin([0,9])]
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([13,9])]
 if args.how_many_movies == 6:
     df_all_movies = df_all_movies[df_all_movies.movie.isin([0,1,2,3,5,6,7,4,9])]
 else: #use all
     pass
-
-gpu_mem()
 
 ################################
 ### Split in Train, Validation, Test
@@ -103,7 +99,8 @@ if args.test_train_splitting_mode == "Vertical":
     # In case use balanced dataset
     df_train, df_test = split_train_test_vertically(
         df_all_movies, 
-        test_movies_dict = {"FirstBite": 4, "Superhero": 9, "YouAgain": 13})
+        #test_movies_dict = {"FirstBite": 4, "Superhero": 9, "YouAgain": 13})
+        test_movies_dict = {"FirstBite": 4, "YouAgain": 13})
     df_val = df_train[df_train.id == 99] #make sure to be empty
 elif args.test_train_splitting_mode == "Horizontal":
     df_train, df_val, df_test = split_train_val_test_horizontally(
@@ -119,7 +116,6 @@ elif args.test_train_splitting_mode == "MovieRest":
     df_train, df_test = split_train_test_rest_classification(df_all_movies, df_rest)
     df_val = df_train[df_train.id == 99] #make sure to be empty
 
-gpu_mem()
 
 ################################
 ### Create Datasets
@@ -157,8 +153,6 @@ with open(os.devnull, "w") as fnull:
             sizewind = args.window_half_size
         )
 
-gpu_mem()
-
 # Extarct the list of graphs of each dataset
 graphs_list_train = dataset_train.get_graphs_list()
 graphs_list_val = dataset_val.get_graphs_list()
@@ -180,8 +174,6 @@ print(f"There are {len(graphs_list_test)} graphs in the test set.")
 print(f"N batches in train: {num_batches_train}")
 print(f"N batches in val: {num_batches_val}")
 print(f"N batches in test: {num_batches_test}")
-
-gpu_mem()
 
 # for idx, data in enumerate(graphs_list_train):
 #     if data.x.shape[1] != 11:
@@ -206,8 +198,6 @@ MyGat = GATModel(
 
 MyGat = MyGat.to(device)
 
-gpu_mem()
-
 #print(next(MyGat.parameters()).device)
 #print(torch.cuda.memory_summary(device=None, abbreviated=False))
 
@@ -230,12 +220,13 @@ best_model, results = GAT_train(
     learning_rate=args.lr
 )
 
-gpu_mem()
 
 ################################
 ### Predict Labels Using best model
 ################################
 
+pred_y_train = GAT_eval(best_model, loader_train) #predocted 
+y_train = [g.y.item() for g in graphs_list_train] #true labels
 pred_y_test = GAT_eval(best_model, loader_test) #predocted 
 y_test = [g.y.item() for g in graphs_list_test] #true labels
 
@@ -251,7 +242,8 @@ test_accs = results["test_accuracies"]
 best_test_accuracy = results["best_test_accuracy"]
 
 # Create Folder
-RESULT_DIR = Path(f"data/results/GAT/{args.type_dataset}/{args.how_many_movies}/{args.type_prediction}/{int(best_test_accuracy*10000)}")
+RESULT_DIR = Path(f"data/results/GAT/{args.type_dataset}/{args.how_many_movies}/{args.type_prediction}/{int(train_accs[-1]*10000)}-{int(test_accs[-1]*10000)}")
+print(RESULT_DIR)
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 # Convert SimpleNamespace to dictionary
@@ -263,6 +255,8 @@ results_dict.update(
         "train_accs": train_accs,
         "test_losses": test_losses,
         "test_accs": test_accs, 
+        "pred_y_train": pred_y_train, 
+        "y_train": y_train,
         "pred_y_test": pred_y_test, 
         "y_test": y_test,
     }

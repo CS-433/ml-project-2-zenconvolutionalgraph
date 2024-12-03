@@ -20,30 +20,30 @@ param_grid = {
     # DATASET PARAMETERS
     "num_classes": [13],  # Attention depends on "type_prediction": 13 --> all_emo
     "type_labels": ["single"],  
-    "batch_size": [8],
-    "test_batch_size": [8],
+    "batch_size": [32],
+    "test_batch_size": [32],
     "percentage_train": [0.8],
     "percentage_val": [0.0],
     "test_train_splitting_mode": ["Vertical"],
     "window_half_size": [6], #10, 12
     "node_feat": ["symmetricwindow"],
-    "initial_adj_method": ["clique"],
+    "initial_adj_method": ["FN_edgeAttr_FC_window"],
     "FN": ["Limbic"],
 
     # VIB PARAMETERS
     "dataset_name": ["EMOTION"],  # Fixed value
     "backbone": ["GAT"],
     "hidden_dim": [128],
-    "num_layers": [4],
-    "graph_type": ["prob"],
+    "num_layers": [2],
+    "graph_type": ["KNN"],
     "top_k": [20],  # For KNN
     "epsilon": [0.3],  # For epsiloNN
     "graph_metric_type": ["mlp"],
     "num_per": [13],
-    "feature_denoise": [True],
+    "feature_denoise": [False],
     "repar": [False],
     "beta": [0.00001],
-    "IB_size": [16], #16, 64
+    "IB_size": [32], #16, 64
     "graph_skip_conn": [0.0],
     "graph_include_self": [True],
 

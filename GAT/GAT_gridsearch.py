@@ -15,18 +15,18 @@ param_grid = {
     # DATASET PARAMETERS
     "num_classes": [13],  # Fixed value
     "type_labels": ["single"],  
-    "batch_size": [8],
-    "test_batch_size": [8],
+    "batch_size": [64],
+    "test_batch_size": [64],
     "percentage_train": [0.8],
     "percentage_val": [0.0],
     "test_train_splitting_mode": ["Vertical"],
     "window_half_size": [5],
     "node_feat": ["symmetricwindow"],
-    "initial_adj_method": ["clique"],
-    "FN": ["Limbic"],
+    "initial_adj_method": ["I"],#, "FN_edgeAttr_FC_window"],#FN_edgeAttr_FC_window, I
+    "FN": ['Limbic'],#'Vis', 'SomMot', 'DorsAttn', 'SalVentAttn', 'Cont', 'Default', 'Sub'],
 
     # TRAINING PARAMETERS
-    "epochs": [5],
+    "epochs": [20],
     "lr": [0.001],
 }
 
