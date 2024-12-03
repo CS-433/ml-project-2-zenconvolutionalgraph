@@ -1,0 +1,13 @@
+{
+    "data_path": "/home/dalai/GNN_E/data/processed/all_movies_labelled_13_single_balanced.csv",
+    "batch_size": 32,
+    "num_workers": 4,
+    "num_epochs": 10,
+    "lr": 0.05,
+    "input_dim": 9,
+    "hidden_dim1": 128,
+    "hidden_dim2": 64,
+    "output_dim": 13,
+    "node_feat": "symmetricwindow",
+    "device": "cuda"
+}
