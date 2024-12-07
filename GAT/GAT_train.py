@@ -116,6 +116,14 @@ elif args.test_train_splitting_mode == "MovieRest":
     df_train, df_test = split_train_test_rest_classification(df_all_movies, df_rest)
     df_val = df_train[df_train.id == 99] #make sure to be empty
 
+# Select only one sub
+df_train.loc[~((df_train.id.isin(np.arange(2,3)))), "label"] = -1
+# Select only one sub, ione movie, one timepoint
+df_test.loc[~((df_test.id == 10) & (df_test.movie == 13) & (df_test.timestamp_tr == 100)), "label"] = -1
+
+print(df_train[df_train.label != -1].shape[0] / 414)
+print(df_test[df_test.label != -1].shape[0] / 414)
+
 
 ################################
 ### Create Datasets
@@ -126,31 +134,43 @@ with open(os.devnull, "w") as fnull:
         dataset_train = DatasetEmo(
             df = df_train, #df with mvoies to use
             node_feat = args.node_feat, #"singlefmri", "symmetricwindow", "pastwindow"
-            initial_adj_method = args.initial_adj_method,
+            initial_adj_method = args.initial_adj_method, #"clique_edgeAttr_FC_window", #"FN_edgeAttr_FC_window",
                 # "clique"
                 #FC dynamic:  "fcmovie", "fcwindow"
                 #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
-            FN = args.FN, #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
+            FN = args.FN,  #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
             FN_paths = "data/raw/FN_raw",
-            sizewind = args.window_half_size
+            sizewind = args.window_half_size,
+            verbose = False,
+            thr_FC = 0.7 #big windows requires smoaller thr
         )
 
         dataset_val = DatasetEmo(
-            df = df_val,
-            node_feat = args.node_feat,
-            initial_adj_method = args.initial_adj_method,
-            FN = args.FN,
+            df = df_val, #df with mvoies to use
+            node_feat = args.node_feat, #"singlefmri", "symmetricwindow", "pastwindow"
+            initial_adj_method = args.initial_adj_method, #"clique_edgeAttr_FC_window", #"FN_edgeAttr_FC_window",
+                # "clique"
+                #FC dynamic:  "fcmovie", "fcwindow"
+                #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
+            FN = args.FN,  #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
             FN_paths = "data/raw/FN_raw",
-            sizewind = args.window_half_size
+            sizewind = args.window_half_size,
+            verbose = False,
+            thr_FC = 0.7 #big windows requires smoaller thr
         )
 
         dataset_test = DatasetEmo(
-            df = df_test,
-            node_feat = args.node_feat,
-            initial_adj_method = args.initial_adj_method,
-            FN = args.FN,
+            df = df_test, #df with mvoies to use
+            node_feat = args.node_feat, #"singlefmri", "symmetricwindow", "pastwindow"
+            initial_adj_method = args.initial_adj_method, #"clique_edgeAttr_FC_window", #"FN_edgeAttr_FC_window",
+                # "clique"
+                #FC dynamic:  "fcmovie", "fcwindow"
+                #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
+            FN = args.FN,  #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
             FN_paths = "data/raw/FN_raw",
-            sizewind = args.window_half_size
+            sizewind = args.window_half_size,
+            verbose = False,
+            thr_FC = 0.7 #big windows requires smoaller thr
         )
 
 # Extarct the list of graphs of each dataset

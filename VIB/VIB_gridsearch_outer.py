@@ -20,23 +20,23 @@ param_grid = {
     # DATASET PARAMETERS
     "num_classes": [13],  # Attention depends on "type_prediction": 13 --> all_emo
     "type_labels": ["single"],  
-    "batch_size": [32],
-    "test_batch_size": [32],
+    "batch_size": [8],
+    "test_batch_size": [8],
     "percentage_train": [0.8],
     "percentage_val": [0.0],
     "test_train_splitting_mode": ["Vertical"],
-    "window_half_size": [6], #10, 12
+    "window_half_size": [5], #10, 12
     "node_feat": ["symmetricwindow"],
-    "initial_adj_method": ["FN_edgeAttr_FC_window"],
+    "initial_adj_method": ["clique"], #FN_edgeAttr_FC_window
     "FN": ["Limbic"],
 
     # VIB PARAMETERS
     "dataset_name": ["EMOTION"],  # Fixed value
     "backbone": ["GAT"],
     "hidden_dim": [128],
-    "num_layers": [2],
-    "graph_type": ["KNN"],
-    "top_k": [20],  # For KNN
+    "num_layers": [3],
+    "graph_type": ["prob"],
+    "top_k": [10],  # For KNN
     "epsilon": [0.3],  # For epsiloNN
     "graph_metric_type": ["mlp"],
     "num_per": [13],
@@ -48,7 +48,7 @@ param_grid = {
     "graph_include_self": [True],
 
     # VIB TRAINING PARAMETERS
-    "epochs": [10],
+    "epochs": [5],
     "lr": [0.0001],
     "lr_decay_factor": [0.5],
     "lr_decay_step_size": [50],

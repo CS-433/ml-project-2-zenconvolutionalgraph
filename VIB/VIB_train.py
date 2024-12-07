@@ -171,6 +171,8 @@ if args.type_dataset == "balanced":
 if args.type_dataset == "unbalanced":
     df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_{args.num_classes}_{args.type_labels}.csv")
 
+# ATTENTION: only to test
+#df_all_movies.loc[df_all_movies.label == 12, "label"] = -1
 
 if args.type_prediction == "all_emo":
     pass

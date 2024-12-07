@@ -49,9 +49,16 @@ class GATModel(nn.Module):
         
         return x #return logits
 
-    def get_attention_weights(self):
+    def get_attention_weights(self, data):
+        # It is like a shoerter forward pass
+        # to use only on trined dataset
+        # to pass one graph at a time
+
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        x, attention_weights = self.gat(x, edge_index, edge_attr=edge_attr, return_attention_weights=True)
+
         # Returns the attention weights for visualization
-        return self.attention_weights
+        return attention_weights
 
 
 def visualize_attention_weights(model, data, head=0):
@@ -210,7 +217,7 @@ def GAT_train(
         print(f"\tEpoch {epoch+1}/{num_epochs} [Test], Loss: {epoch_test_loss:.4f}, Accuracy: {epoch_test_accuracy:.4f}\n")
 
         # ---- Update Best Model Based on Test Accuracy ----
-        if epoch_test_accuracy > best_test_accuracy:
+        if epoch_test_accuracy >= best_test_accuracy:
             best_test_accuracy = epoch_test_accuracy
             best_model_state = model.state_dict()
 

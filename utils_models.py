@@ -11,9 +11,11 @@ from torch_geometric.data import Batch
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import networkx as nx
 
 
-def custom_corrcoef(x_matrix):
+def custom_corrcoef(x_matrix, thr = None):
     # Convert x_matrix to numpy if it's a PyTorch tensor
     if isinstance(x_matrix, torch.Tensor):
         x_matrix = x_matrix.numpy()
@@ -51,6 +53,16 @@ def custom_corrcoef(x_matrix):
     corr_matrix[row_is_zero, :] = 0
     corr_matrix[:, row_is_zero] = 0
 
+    # Retain only positive values
+    #corr_matrix[corr_matrix <= 0] = 0
+    #corr_matrix[corr_matrix <= 0] = abs(corr_matrix[corr_matrix <= 0])
+
+    if thr != None:
+        corr_matrix[abs(corr_matrix) < thr] = 0
+
+    # Dno use self loops
+    corr_matrix = corr_matrix - np.diag(np.diag(corr_matrix))
+
     return corr_matrix
 
 class DatasetEmo():
@@ -62,10 +74,12 @@ class DatasetEmo():
                     # "clique"
                     #FC dynamic:  "fcmovie", "fcwindow"
                     #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
-                FN = "Limbic", #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
+                FN = None, #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
                 FN_paths = "data/raw/FN_raw",
                 device = "cpu", # I want to move data in GPU ONLY during batch
-                sizewind = 4
+                sizewind = 4,
+                verbose = False, # Vervose will print the fucntional connecity matrix, ONLY of the first graph
+                thr_FC = None, #thr to use for functional connectiovity
                 ):
         
         self.device = device #or ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -141,13 +155,27 @@ class DatasetEmo():
 
 
                     #NODE CONNECTIVITY
+                    functional_connectivity_matrix = None # it is necessary for verbose
                         #attnetion df alredy ordered before by vindex
                     if initial_adj_method == "clique":
                         # Each node is connected to every other node (both directions)
                         edge_index = self.edge_index_clique_414
                         # Create edge_attr with value 1 for each edge
                         edge_attr = self.edge_attr_clique_414  # 1 attribute per edge
-                    elif initial_adj_method == "FN_const":
+                    elif initial_adj_method == "clique_edgeAttr_FC_window":
+                        edge_index = self.edge_index_clique_414
+                        # compute and put in the correct order functional conecotuty
+                        functional_connectivity_matrix = custom_corrcoef(x_matrix, thr=thr_FC)    
+                        edge_attr = []
+                        for i in range(edge_index.size(1)):  # Loop over each edge
+                            node1, node2 = edge_index[:, i].numpy()  # Extract node1 and node2 for the current edge
+                            edge_value = functional_connectivity_matrix[node1, node2]  # Extract the correlation value
+                            edge_attr.append(edge_value)
+                        #make tensor
+                        edge_index = edge_index# already a tensor
+                        edge_attr = torch.tensor(edge_attr)    
+                    elif initial_adj_method == "FN_const_1":
+                        # use only nodes of a specific FN, and use as attr of the edges the scalar 1
                         assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
                         edge_index = self.edge_index_clique_FN
                         edge_attr = self.edge_attr_clique_FN  
@@ -155,6 +183,7 @@ class DatasetEmo():
                         # x_matrix --> (#nodes, #feat_nodes) --> put the correpsoding roes to 0
                         x_matrix[self.nodes_not_in_FN] = 0
                     elif initial_adj_method == "FN_edgeAttr_FC_window":
+                        # use only nodes of a specific FN, and use as attr of the edges the FC calculated inside the window
                         assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
                         edge_index = self.edge_index_clique_FN
                         # put the features of all OTHERS nodes to 0
@@ -164,7 +193,8 @@ class DatasetEmo():
                         #print(x_matrix.shape)
                         # Edge attr build with FC of the current window --> no connecoty between region non in FN (removed rows from x_matrix)
                         #functional_connectivity_matrix = np.corrcoef(x_matrix) #(correlation between nodes' time series)
-                        functional_connectivity_matrix = custom_corrcoef(x_matrix)
+                        functional_connectivity_matrix = custom_corrcoef(x_matrix, thr=thr_FC)                      
+                        
                         #print(functional_connectivity_matrix)
                         #print(functional_connectivity_matrix.shape)
                         # Iterate over each edge in edge_index and extract the corresponding value from the matrix
@@ -183,6 +213,35 @@ class DatasetEmo():
                     #GRAPH LABEL
                     y = df_single_movie_sub_timepoint["label"].unique()[0]
                     y = torch.tensor(y, dtype=torch.long)
+
+                    if verbose and (functional_connectivity_matrix is not None):
+                        # In case we have a FN, use only those nodes
+                        # if FN is not None:
+                        #     zero_rows = np.all(functional_connectivity_matrix == 0, axis=1)
+                        #     zero_cols = np.all(functional_connectivity_matrix == 0, axis=0)
+                        #     functional_connectivity_matrix = functional_connectivity_matrix[~zero_rows][:, ~zero_cols]
+                        # Print functional connectivity calculated
+                        print(functional_connectivity_matrix.shape)
+                        plt.imshow(functional_connectivity_matrix, cmap='viridis', aspect='auto')
+                        plt.colorbar(label="Connectivity Strength")
+                        plt.xlabel("Region Index"); plt.ylabel("Region Index")
+                        plt.title(f"Functional Connectivity Matrix, Sub {sub}, Movie {movie}, time {timepoint}")
+                        # Check if grpah is connected with speicifc thr
+                        G_temp = nx.from_numpy_array(functional_connectivity_matrix)
+                        print(nx.is_connected(G_temp))
+                        # Print hist of values in functional connectivity
+                        plt.figure()
+                        flattened_values = functional_connectivity_matrix.flatten()
+                        print(len(flattened_values))
+                        plt.hist(flattened_values, bins=30, alpha=0.7, color='blue', edgecolor='black')
+                        plt.title('Histogram of Matrix Values')
+                        plt.xlabel('Value')
+                        #plt.xlim(-0.1, 0.1)
+                        plt.yscale("log")
+                        plt.ylabel('Frequency')
+                        plt.show()   
+                        #return  
+
 
                     #MOVE TO DEVICE
                     #x_matrix = x_matrix.clone().detach().float().to(self.device)
