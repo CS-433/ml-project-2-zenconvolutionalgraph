@@ -7,7 +7,7 @@ from tqdm import tqdm
 class SimpleGCN(nn.Module):
     def __init__(self, input_dim, hidden_dim1, hidden_dim2, output_dim):
         super().__init__()
-        self.conv1 = pyg_nn.GCNConv(input_dim, hidden_dim2)
+        self.conv1 = pyg_nn.GCNConv(input_dim, hidden_dim1)
         #self.conv2 = pyg_nn.GCNConv(hidden_dim1, hidden_dim2)
         self.linear = nn.Linear(hidden_dim2, output_dim)
         #he init
@@ -17,8 +17,8 @@ class SimpleGCN(nn.Module):
 
     def forward(self, x, edge_index, batch):
         x = self.conv1(x, edge_index)
-        #x = F.relu(x)
-        #x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        x = self.conv2(x, edge_index)
         x = global_mean_pool(x, batch)
         x = F.relu(x)
         x = self.linear(x)
@@ -28,10 +28,8 @@ class SimpleGCN(nn.Module):
 def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device, 
         num_epochs=10):
     #gc.collect()
-    best_prediction = []
     for epoch in range(num_epochs):
         #print(f"Epoch {epoch+1}/{num_epochs}, Batch {i+1}")
-        predicted_label = []
         train_losses = []
         test_losses = []
         train_accuracies = []
@@ -60,10 +58,11 @@ def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device,
             
             #calculate train accuracy
             _, predicted = torch.max(out, dim=1)
-            progress_bar.set_postfix({"Batch Loss": loss.item(), "out": (predicted==batch.y).sum().item()})
-            #progress_bar.set_postfix({"Batch Loss": loss.item(), "out": predicted})
+            progress_bar.set_postfix({"Batch Loss": loss.item(), "out": predicted})
+            #progress_bar.set_postfix({"Batch Loss": loss.item(), "out": (predicted==batch.y).sum().item()})
             train_acc += (predicted==batch.y).sum().item()
             train_sample += batch.y.size(0)
+
             #clean memory
             del batch
             torch.cuda.empty_cache()
@@ -94,7 +93,6 @@ def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device,
 
                 _, predicted = torch.max(out, dim=1)
                 progress_bar_test.set_postfix({"Batch Loss": loss.item(), "out": (predicted==batch.y).sum().item()})
-                predicted_label.append(predicted)
                 test_acc += (predicted==batch.y).sum().item()
                 test_sample += batch.y.size(0)
 
@@ -111,11 +109,10 @@ def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device,
         #Get best model from test accuracy
         if epoch_test_accuracy > best_test_acc:
             best_test_acc = epoch_test_accuracy
-            best_prediction = predicted_label
             best_model_state = model.state_dict()
         
     model.load_state_dict(best_model_state)
-    all_labels = torch.cat(best_prediction).cpu().numpy()
+
     # Convert lists to standard Python types for JSON serialization
     results_dict = {
         "train_losses": [float(x) for x in train_losses],
@@ -123,7 +120,6 @@ def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device,
         "train_accuracies": [float(x) for x in train_accuracies],
         "test_accuracies": [float(x) for x in test_accuracies],
         "best_test_accuracy": float(best_test_acc),
-        "best_prediction" : best_prediction
     }
 
     return model, results_dict
