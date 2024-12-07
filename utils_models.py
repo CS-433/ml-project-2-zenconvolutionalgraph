@@ -13,7 +13,11 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import networkx as nx
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, parallel_backend
+# import dask
+# from dask import delayed
+import gc
+
 
 
 def custom_corrcoef(x_matrix, thr = None):
@@ -93,24 +97,24 @@ class DatasetEmo_fast():
         self.graphs_list_info = [] #list of the info of each graph
 
         #VALUES FOR USEFUL LATER
-        n_nodes = 414 # n_nodes = df_single_movie_sub["vindex"].unique()
-        # for clique grpah of 414 nodes
-        edge_index_clique_414 = torch.combinations(torch.arange(n_nodes), r=2).t()
-        self.edge_index_clique_414 = torch.cat([edge_index_clique_414, edge_index_clique_414.flip(0)], dim=1)
-        self.edge_attr_clique_414  = torch.ones(self.edge_index_clique_414.size(1), 1)  # 1 attribute per edge
-        #for clique FN
-        df_FN = pd.read_csv(os.path.join(FN_paths, f"FN_{FN}.csv")) #remember that the "Sub" FN is always present
-        nodes_in_FN = df_FN[df_FN.is_in_FN == 1].vindex.values # Extract nodes that are in the FN subset
-        self.nodes_in_FN = nodes_in_FN
-        self.nodes_not_in_FN = df_FN[~(df_FN.is_in_FN == 1)].vindex.values
-        edge_index_clique_FN = torch.combinations(torch.tensor(nodes_in_FN), r=2).t()  # Pairwise combinations
-        self.edge_index_clique_FN = torch.cat([edge_index_clique_FN, edge_index_clique_FN.flip(0)], dim=1)  # Add both directions
-        self.edge_attr_clique_FN = torch.ones(self.edge_index_clique_FN.size(1), 1)  # 1 attribute per edge
-        # For only self loops (indentity adjancy matrix)
-        self.edge_index_I = torch.tensor([[i for i in range(414)],  # Source nodes
-                           [i for i in range(414)]],  # Target nodes
-                          dtype=torch.long)
-        self.edge_attr_I = torch.ones((414, 1))
+        # n_nodes = 414 # n_nodes = df_single_movie_sub["vindex"].unique()
+        # # for clique grpah of 414 nodes
+        # edge_index_clique_414 = torch.combinations(torch.arange(n_nodes), r=2).t()
+        # self.edge_index_clique_414 = torch.cat([edge_index_clique_414, edge_index_clique_414.flip(0)], dim=1)
+        # self.edge_attr_clique_414  = torch.ones(self.edge_index_clique_414.size(1), 1)  # 1 attribute per edge
+        # #for clique FN
+        # df_FN = pd.read_csv(os.path.join(FN_paths, f"FN_{FN}.csv")) #remember that the "Sub" FN is always present
+        # nodes_in_FN = df_FN[df_FN.is_in_FN == 1].vindex.values # Extract nodes that are in the FN subset
+        # self.nodes_in_FN = nodes_in_FN
+        # self.nodes_not_in_FN = df_FN[~(df_FN.is_in_FN == 1)].vindex.values
+        # edge_index_clique_FN = torch.combinations(torch.tensor(nodes_in_FN), r=2).t()  # Pairwise combinations
+        # self.edge_index_clique_FN = torch.cat([edge_index_clique_FN, edge_index_clique_FN.flip(0)], dim=1)  # Add both directions
+        # self.edge_attr_clique_FN = torch.ones(self.edge_index_clique_FN.size(1), 1)  # 1 attribute per edge
+        # # For only self loops (indentity adjancy matrix)
+        # self.edge_index_I = torch.tensor([[i for i in range(414)],  # Source nodes
+        #                    [i for i in range(414)]],  # Target nodes
+        #                   dtype=torch.long)
+        # self.edge_attr_I = torch.ones((414, 1))
         
 
         # Ectarct movies
@@ -124,11 +128,11 @@ class DatasetEmo_fast():
 
             subjects = df_single_movie["id"].unique()
 
-            print(movie)
+            #print(f"movie {movie}")
 
             for sub in tqdm(subjects):
 
-                print(sub)
+                #print(f"sub {sub}")
 
                 df_single_movie_sub = df_single_movie[df_single_movie.id == sub]
 
@@ -139,11 +143,8 @@ class DatasetEmo_fast():
                 #ATTENTION: ORDER ROWS BY VINDEX, SO SURE THAT INDEX ARE INCREASINGLY
                 df_single_movie_sub = df_single_movie_sub.sort_values(by="vindex")
 
-                list_small = Parallel(n_jobs=50)(delayed(self.parallelization_timepoint_per_movie_sub)(df_single_movie_sub, movie, sub, tp, sizewind, node_feat, initial_adj_method, FN, thr_FC, verbose) for tp in timepoints)
-
-                print(list_small)
-                print(list_small)
-
+                list_small = Parallel(n_jobs=10, timeout=100, backend="loky")(delayed(parallelization_timepoint_per_movie_sub)(df_single_movie_sub, movie, sub, tp, sizewind, node_feat, initial_adj_method, FN, FN_paths, thr_FC, verbose) for tp in timepoints)
+    
                 graph_list_small = [x[0] for x in list_small]
                 graph_list_info_small = [x[1] for x in list_small]
 
@@ -158,131 +159,149 @@ class DatasetEmo_fast():
 
 
 
-    def parallelization_timepoint_per_movie_sub(
-        self,
-        df_single_movie_sub,
-        movie, 
-        sub, 
-        timepoint,
-        sizewind = 5,
-        node_feat = "symmetricwindow", 
-        initial_adj_method = "clique_edgeAttr_FC_window", 
-        FN = None, 
-        thr_FC = 0.7, 
-        verbose = False
-    ):
+def parallelization_timepoint_per_movie_sub(
+    df_single_movie_sub,
+    movie, 
+    sub, 
+    timepoint,
+    sizewind = 5,
+    node_feat = "symmetricwindow", 
+    initial_adj_method = "clique_edgeAttr_FC_window", 
+    FN = None, 
+    FN_paths = None,
+    thr_FC = 0.7, 
+    verbose = False
+):
         
-        # Select data of single timepoint
-        df_single_movie_sub_timepoint = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]
+    # Select data of single timepoint (given specific movie and user)
+    df_single_movie_sub_timepoint = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]
 
-        #NODE FEAT
-        if node_feat == "singlefmri":
-            x = df_single_movie_sub_timepoint[["vindex", "score"]]
-            x_matrix = np.array(x["score"]).reshape(-1, 1)
-            #print(x_matrix.shape) #must be (#nodes, #feat_nodes)
-            x_matrix = torch.tensor(x_matrix, dtype=torch.float)
+    #NODE FEAT
+    if node_feat == "singlefmri":
+        # single frmi value in current timepoint
+        x = df_single_movie_sub_timepoint[["vindex", "score"]]
+        x_matrix = np.array(x["score"]).reshape(-1, 1)
+        #print(x_matrix.shape) #must be (#nodes, #feat_nodes)
+        x_matrix = torch.tensor(x_matrix, dtype=torch.float)
 
-        if node_feat == "symmetricwindow":
-            time_around = [i for i in range(timepoint - sizewind, timepoint + sizewind + 1)]
-            x = df_single_movie_sub.loc[df_single_movie_sub.timestamp_tr.isin(time_around) ,["vindex", "score", "timestamp_tr"]]
-            x = x.pivot(index= "vindex", columns = "timestamp_tr", values = "score")
-            #print(x.shape) #must be (#nodes, #feat_nodes)
-            #print(x)
-            x_matrix = torch.tensor(x.values, dtype=torch.float)
+    if node_feat == "symmetricwindow":
+        # symmetric wundow around the current timepoint
+        time_around = [i for i in range(timepoint - sizewind, timepoint + sizewind + 1)]
+        x = df_single_movie_sub.loc[df_single_movie_sub.timestamp_tr.isin(time_around), ["vindex", "score", "timestamp_tr"]]
+        x = x.pivot(index= "vindex", columns = "timestamp_tr", values = "score")
+        #print(x.shape) #must be (#nodes, #feat_nodes)
+        #print(x)
+        x_matrix = torch.tensor(x.values, dtype=torch.float)
 
 
-        #NODE CONNECTIVITY
-        functional_connectivity_matrix = None # it is necessary for verbose
-            #attnetion df alredy ordered before by vindex
-        if initial_adj_method == "clique":
-            # Each node is connected to every other node (both directions)
-            edge_index = self.edge_index_clique_414
-            # Create edge_attr with value 1 for each edge
-            edge_attr = self.edge_attr_clique_414  # 1 attribute per edge
-        elif initial_adj_method == "clique_edgeAttr_FC_window":
-            edge_index = self.edge_index_clique_414
-            # compute and put in the correct order functional conecotuty
-            functional_connectivity_matrix = custom_corrcoef(x_matrix, thr=thr_FC)    
-            edge_attr = []
-            for i in range(edge_index.size(1)):  # Loop over each edge
-                node1, node2 = edge_index[:, i].numpy()  # Extract node1 and node2 for the current edge
-                edge_value = functional_connectivity_matrix[node1, node2]  # Extract the correlation value
-                edge_attr.append(edge_value)
-            #make tensor
-            edge_index = edge_index# already a tensor
-            edge_attr = torch.tensor(edge_attr)    
-        elif initial_adj_method == "FN_const_1":
-            # use only nodes of a specific FN, and use as attr of the edges the scalar 1
-            assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
-            edge_index = self.edge_index_clique_FN
-            edge_attr = self.edge_attr_clique_FN  
-            # put the features of all OTHERS nodes to 0
-            # x_matrix --> (#nodes, #feat_nodes) --> put the correpsoding roes to 0
-            x_matrix[self.nodes_not_in_FN] = 0
-        elif initial_adj_method == "FN_edgeAttr_FC_window":
-            # use only nodes of a specific FN, and use as attr of the edges the FC calculated inside the window
-            assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
-            edge_index = self.edge_index_clique_FN
-            # put the features of all OTHERS nodes to 0
-            x_matrix[self.nodes_not_in_FN] = 0
-            #print(self.nodes_not_in_FN)
-            #print(x_matrix)
-            #print(x_matrix.shape)
-            # Edge attr build with FC of the current window --> no connecoty between region non in FN (removed rows from x_matrix)
-            #functional_connectivity_matrix = np.corrcoef(x_matrix) #(correlation between nodes' time series)
-            functional_connectivity_matrix = custom_corrcoef(x_matrix, thr=thr_FC)                      
-            
-            #print(functional_connectivity_matrix)
-            #print(functional_connectivity_matrix.shape)
-            # Iterate over each edge in edge_index and extract the corresponding value from the matrix
-            edge_attr = []
-            for i in range(edge_index.size(1)):  # Loop over each edge
-                node1, node2 = edge_index[:, i].numpy()  # Extract node1 and node2 for the current edge
-                edge_value = functional_connectivity_matrix[node1, node2]  # Extract the correlation value
-                edge_attr.append(edge_value)
-            #make tensor
-            edge_index = edge_index# already a tensor
-            edge_attr = torch.tensor(edge_attr)
-        elif initial_adj_method == "I": # only self loops
-            edge_index = self.edge_index_I
-            edge_attr = self.edge_attr_I
+    #NODE CONNECTIVITY
+    functional_connectivity_matrix = None # it is necessary for verbose
+        
+    if initial_adj_method == "clique":
+        # Each node is connected to every other node (both directions)
+        edge_index = torch.cat([torch.combinations(torch.arange(414), r=2).t(), torch.combinations(torch.arange(414), r=2).t().flip(0)], dim=1)
+        # Create edge_attr with value 1 for each edge
+        edge_attr = torch.ones(edge_index.size(1), 1)  # 1 attribute per edge
 
-        #GRAPH LABEL
-        y = df_single_movie_sub_timepoint["label"].unique()[0]
-        y = torch.tensor(y, dtype=torch.long)
+    elif initial_adj_method == "clique_edgeAttr_FC_window":
+        # Each node is connected to every other node (both directions)
+        edge_index = torch.cat([torch.combinations(torch.arange(414), r=2).t(), torch.combinations(torch.arange(414), r=2).t().flip(0)], dim=1)
+        # compute and put in the correct order functional conecotuty
+        functional_connectivity_matrix = custom_corrcoef(x_matrix, thr=thr_FC)    
+        edge_attr = []
+        for i in range(edge_index.size(1)):  # Loop over each edge
+            node1, node2 = edge_index[:, i].numpy()  # Extract node1 and node2 for the current edge
+            edge_value = functional_connectivity_matrix[node1, node2]  # Extract the correlation value
+            edge_attr.append(edge_value)
+        #make tensor
+        edge_index = edge_index# already a tensor
+        edge_attr = torch.tensor(edge_attr)    
 
-        if verbose and (functional_connectivity_matrix is not None):
-            # In case we have a FN, use only those nodes
-            # if FN is not None:
-            #     zero_rows = np.all(functional_connectivity_matrix == 0, axis=1)
-            #     zero_cols = np.all(functional_connectivity_matrix == 0, axis=0)
-            #     functional_connectivity_matrix = functional_connectivity_matrix[~zero_rows][:, ~zero_cols]
-            # Print functional connectivity calculated
-            print(functional_connectivity_matrix.shape)
-            plt.imshow(functional_connectivity_matrix, cmap='viridis', aspect='auto')
-            plt.colorbar(label="Connectivity Strength")
-            plt.xlabel("Region Index"); plt.ylabel("Region Index")
-            plt.title(f"Functional Connectivity Matrix, Sub {sub}, Movie {movie}, time {timepoint}")
-            # Check if grpah is connected with speicifc thr
-            G_temp = nx.from_numpy_array(functional_connectivity_matrix)
-            print(nx.is_connected(G_temp))
-            # Print hist of values in functional connectivity
-            plt.figure()
-            flattened_values = functional_connectivity_matrix.flatten()
-            print(len(flattened_values))
-            plt.hist(flattened_values, bins=30, alpha=0.7, color='blue', edgecolor='black')
-            plt.title('Histogram of Matrix Values')
-            plt.xlabel('Value')
-            #plt.xlim(-0.1, 0.1)
-            plt.yscale("log")
-            plt.ylabel('Frequency')
-            plt.show()   
-            #return  
+    elif initial_adj_method == "FN_const_1":
+        # use only nodes of a specific FN, and use as attr of the edges the scalar 1
+        assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
+        # Find noodes in current FN
+        df_FN = pd.read_csv(os.path.join(FN_paths, f"FN_{FN}.csv")) #remember that the "Sub" FN is always present
+        nodes_in_FN = df_FN[df_FN.is_in_FN == 1].vindex.values # Extract nodes that are in the FN subset
+        nodes_not_in_FN = df_FN[~(df_FN.is_in_FN == 1)].vindex.values
+        # make edge index and edge attr
+        edge_index_clique_FN = torch.combinations(torch.tensor(nodes_in_FN), r=2).t()  # Pairwise combinations
+        edge_index = torch.cat([edge_index_clique_FN, edge_index_clique_FN.flip(0)], dim=1)  # Add both directions
+        edge_attr = torch.ones(edge_index_clique_FN.size(1), 1)  # 1 attribute per edge
+        # put all nodes not in FN as 0
+        x_matrix[nodes_not_in_FN] = 0
 
-        graph = Data(x=x_matrix, edge_index=edge_index, edge_attr=edge_attr, y = y)
-        info_graph = [movie, sub, timepoint, y]
+    elif initial_adj_method == "FN_edgeAttr_FC_window":
+        # use only nodes of a specific FN, and use as attr of the edges the FC calculated inside the window
+        assert FN != None, "Want to create connectivity with FN, but not specific FN has been defined"
+        # Find noodes in current FN
+        df_FN = pd.read_csv(os.path.join(FN_paths, f"FN_{FN}.csv")) #remember that the "Sub" FN is always present
+        nodes_in_FN = df_FN[df_FN.is_in_FN == 1].vindex.values # Extract nodes that are in the FN subset
+        nodes_not_in_FN = df_FN[~(df_FN.is_in_FN == 1)].vindex.values
+        # make edge index and edge attr
+        edge_index_clique_FN = torch.combinations(torch.tensor(nodes_in_FN), r=2).t()  # Pairwise combinations
+        edge_index = torch.cat([edge_index_clique_FN, edge_index_clique_FN.flip(0)], dim=1)  # Add both directions
+        edge_attr = torch.ones(edge_index_clique_FN.size(1), 1)  # 1 attribute per edge
+        # put all nodes not in FN as 0
+        x_matrix[nodes_not_in_FN] = 0
+        # calcutle FC
+        functional_connectivity_matrix = custom_corrcoef(x_matrix, thr=thr_FC)                      
+        # Iterate over each edge in edge_index and extract the corresponding value from the matrix
+        edge_attr = []
+        for i in range(edge_index.size(1)):  # Loop over each edge
+            node1, node2 = edge_index[:, i].numpy()  # Extract node1 and node2 for the current edge
+            edge_value = functional_connectivity_matrix[node1, node2]  # Extract the correlation value
+            edge_attr.append(edge_value)
+        #make tensor
+        edge_index = edge_index# already a tensor
+        edge_attr = torch.tensor(edge_attr)
+        
+    elif initial_adj_method == "I": # only self loops
+        edge_index = torch.tensor([[i for i in range(414)],  # Source nodes
+                           [i for i in range(414)]],  # Target nodes
+                          dtype=torch.long)
+        edge_attr = torch.ones((414, 1))
 
-        return graph, info_graph
+    #GRAPH LABEL
+    y = df_single_movie_sub_timepoint["label"].unique()[0]
+    y = torch.tensor(y, dtype=torch.long)
+
+    if verbose and (functional_connectivity_matrix is not None):
+        # In case we have a FN, use only those nodes
+        # if FN is not None:
+        #     zero_rows = np.all(functional_connectivity_matrix == 0, axis=1)
+        #     zero_cols = np.all(functional_connectivity_matrix == 0, axis=0)
+        #     functional_connectivity_matrix = functional_connectivity_matrix[~zero_rows][:, ~zero_cols]
+        # Print functional connectivity calculated
+        print(functional_connectivity_matrix.shape)
+        plt.imshow(functional_connectivity_matrix, cmap='viridis', aspect='auto')
+        plt.colorbar(label="Connectivity Strength")
+        plt.xlabel("Region Index"); plt.ylabel("Region Index")
+        plt.title(f"Functional Connectivity Matrix, Sub {sub}, Movie {movie}, time {timepoint}")
+        # Check if grpah is connected with speicifc thr
+        G_temp = nx.from_numpy_array(functional_connectivity_matrix)
+        print(nx.is_connected(G_temp))
+        # Print hist of values in functional connectivity
+        plt.figure()
+        flattened_values = functional_connectivity_matrix.flatten()
+        print(len(flattened_values))
+        plt.hist(flattened_values, bins=30, alpha=0.7, color='blue', edgecolor='black')
+        plt.title('Histogram of Matrix Values')
+        plt.xlabel('Value')
+        #plt.xlim(-0.1, 0.1)
+        plt.yscale("log")
+        plt.ylabel('Frequency')
+        plt.show()   
+        #return  
+
+    graph = Data(x=x_matrix, edge_index=edge_index, edge_attr=edge_attr, y = y)
+    info_graph = [movie, sub, timepoint, y]
+
+    del x_matrix
+    del functional_connectivity_matrix
+    torch.cuda.empty_cache()  # If using CUDA
+
+    return graph, info_graph
 
 
 

@@ -10,7 +10,7 @@ param_grid = {
 
     "type_prediction": ["all_emo"], #all_emo, only ione emo e.e. "1"
     "type_dataset": ["balanced"], #balanced, unbalanced
-    "how_many_movies": [8], #how mna movies use to test the model, 1, 6, ...
+    "how_many_movies": [13], #how mna movies use to test the model, 1, 6, ...
 
     # DATASET PARAMETERS
     "num_classes": [13],  # Fixed value

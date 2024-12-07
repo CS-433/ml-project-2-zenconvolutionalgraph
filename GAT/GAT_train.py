@@ -23,6 +23,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 import matplotlib.pyplot as plt
 import random
+import dask.dataframe as dd
+
 
 import torch
 import torch.optim as optim
@@ -65,7 +67,9 @@ print(args)
 ################################
 
 if args.type_dataset == "balanced":
-    df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_13_single_balanced.csv")
+    #df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_13_single_balanced.csv")
+    df_all_movies = dd.read_csv("data/processed/all_movies_labelled_13_single_balanced.csv")
+    df_all_movies = df_all_movies.compute()
 if args.type_dataset == "unbalanced":
     df_all_movies = pd.read_csv(f"data/processed/all_movies_labelled_{args.num_classes}_{args.type_labels}.csv")
 
@@ -82,7 +86,7 @@ else: #single emo
 if args.how_many_movies == 1:
     df_all_movies = df_all_movies[df_all_movies.movie.isin([13,9])]
 if args.how_many_movies == 8:
-    df_all_movies = df_all_movies[df_all_movies.movie.isin([4,9,    0,1,2,3,5,6])]
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([4,9,    3,5,6])]
 else: #use all
     pass
 
@@ -120,7 +124,7 @@ elif args.test_train_splitting_mode == "MovieRest":
 #df_train.loc[~((df_train.id.isin(np.arange(2,3)))), "label"] = -1
 df_train.loc[~((df_train.id.isin(np.arange(2,3)))), "label"] = -1
 # SUbset in train--> only one sub
-df_train.loc[~((df_train.id.isin(np.arange(2,3)))), "label"] = -1
+df_test.loc[~((df_test.id.isin(np.arange(2,3)))), "label"] = -1
 
 #df_test.loc[~((df_test.id == 10) & (df_test.movie == 13) & (df_test.timestamp_tr == 100)), "label"] = -1
 #df_test.loc[~((df_test.id == 2) & (df_test.movie == 13)), "label"] = -1
