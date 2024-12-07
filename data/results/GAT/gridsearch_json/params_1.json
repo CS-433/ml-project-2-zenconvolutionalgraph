@@ -1,7 +1,7 @@
 {
     "type_prediction": "all_emo",
     "type_dataset": "balanced",
-    "how_many_movies": 1,
+    "how_many_movies": 8,
     "num_classes": 13,
     "type_labels": "single",
     "batch_size": 32,
@@ -13,6 +13,6 @@
     "node_feat": "symmetricwindow",
     "initial_adj_method": "clique_edgeAttr_FC_window",
     "FN": "Limbic",
-    "epochs": 10,
+    "epochs": 50,
     "lr": 0.001
 }

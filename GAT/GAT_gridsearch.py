@@ -10,7 +10,7 @@ param_grid = {
 
     "type_prediction": ["all_emo"], #all_emo, only ione emo e.e. "1"
     "type_dataset": ["balanced"], #balanced, unbalanced
-    "how_many_movies": [1], #how mna movies use to test the model, 1, 6, ...
+    "how_many_movies": [8], #how mna movies use to test the model, 1, 6, ...
 
     # DATASET PARAMETERS
     "num_classes": [13],  # Fixed value
@@ -26,7 +26,7 @@ param_grid = {
     "FN": ['Limbic'],#'Vis', 'SomMot', 'DorsAttn', 'SalVentAttn', 'Cont', 'Default', 'Sub'],
 
     # TRAINING PARAMETERS
-    "epochs": [10],
+    "epochs": [50],
     "lr": [0.001],
 }
 
