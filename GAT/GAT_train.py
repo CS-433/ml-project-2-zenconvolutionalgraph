@@ -84,9 +84,9 @@ else: #single emo
 
 
 if args.how_many_movies == 1:
-    df_all_movies = df_all_movies[df_all_movies.movie.isin([13,9])]
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([9, 13])]
 if args.how_many_movies == 8:
-    df_all_movies = df_all_movies[df_all_movies.movie.isin([4,9,    3,5,6])]
+    df_all_movies = df_all_movies[df_all_movies.movie.isin([4,9,    1,2,3,5,6])]
 else: #use all
     pass
 
@@ -97,14 +97,14 @@ else: #use all
 print(f"Splitting {args.test_train_splitting_mode}...")
 
 if args.test_train_splitting_mode == "Vertical":
-    #df_train, df_test = split_train_test_vertically(
-    #    df_all_movies, 
-    #   test_movies_dict = {"BigBuckBunny": 2, "FirstBite": 4, "Superhero": 9})
-    # In case use balanced dataset
+    if args.how_many_movies == 1:
+        dict_test_movies = {"FirstBite": 4, "YouAgain": 13}
+    else:
+        dict_test_movies = {"FirstBite": 4, "Superhero": 9, "YouAgain": 13}
+
     df_train, df_test = split_train_test_vertically(
         df_all_movies, 
-        test_movies_dict = {"FirstBite": 4, "Superhero": 9, "YouAgain": 13})
-        #test_movies_dict = {"FirstBite": 4, "YouAgain": 13})
+        test_movies_dict = dict_test_movies)
     df_val = df_train[df_train.id == 99] #make sure to be empty
 elif args.test_train_splitting_mode == "Horizontal":
     df_train, df_val, df_test = split_train_val_test_horizontally(
@@ -120,17 +120,12 @@ elif args.test_train_splitting_mode == "MovieRest":
     df_train, df_test = split_train_test_rest_classification(df_all_movies, df_rest)
     df_val = df_train[df_train.id == 99] #make sure to be empty
 
-# Subset in train --> only one sub
-#df_train.loc[~((df_train.id.isin(np.arange(2,3)))), "label"] = -1
-df_train.loc[~((df_train.id.isin(np.arange(2,3)))), "label"] = -1
-# SUbset in train--> only one sub
-df_test.loc[~((df_test.id.isin(np.arange(2,3)))), "label"] = -1
-
-#df_test.loc[~((df_test.id == 10) & (df_test.movie == 13) & (df_test.timestamp_tr == 100)), "label"] = -1
-#df_test.loc[~((df_test.id == 2) & (df_test.movie == 13)), "label"] = -1
-
-print(df_train[df_train.label != -1].shape[0] / 414)
-print(df_test[df_test.label != -1].shape[0] / 414)
+# if we want only one sub
+if args.use_one_sub:
+    df_train.loc[~((df_train.id.isin(np.arange(2,3)))), "label"] = -1
+    df_test.loc[~((df_test.id.isin(np.arange(2,3)))), "label"] = -1
+    print(df_train[df_train.label != -1].shape[0] / 414)
+    print(df_test[df_test.label != -1].shape[0] / 414)
 
 
 ################################

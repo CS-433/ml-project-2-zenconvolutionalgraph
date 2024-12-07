@@ -143,7 +143,7 @@ class DatasetEmo_fast():
                 #ATTENTION: ORDER ROWS BY VINDEX, SO SURE THAT INDEX ARE INCREASINGLY
                 df_single_movie_sub = df_single_movie_sub.sort_values(by="vindex")
 
-                list_small = Parallel(n_jobs=10, timeout=100, backend="loky")(delayed(parallelization_timepoint_per_movie_sub)(df_single_movie_sub, movie, sub, tp, sizewind, node_feat, initial_adj_method, FN, FN_paths, thr_FC, verbose) for tp in timepoints)
+                list_small = Parallel(n_jobs=-1, timeout=100, backend="loky")(delayed(parallelization_timepoint_per_movie_sub)(df_single_movie_sub, movie, sub, tp, sizewind, node_feat, initial_adj_method, FN, FN_paths, thr_FC, verbose) for tp in timepoints)
     
                 graph_list_small = [x[0] for x in list_small]
                 graph_list_info_small = [x[1] for x in list_small]
