@@ -9,5 +9,6 @@
     "hidden_dim2": 64,
     "output_dim": 13,
     "node_feat": "symmetricwindow",
-    "device": "cuda"
+    "device": "cuda",
+    "initial_adj_method": "/home/dalai/GNN_E/data/raw/labels/run_onsets.pkl"
 }

@@ -54,6 +54,7 @@ def parse_args():
     parser.add_argument('--device', type=str, choices=['cuda', 'cpu'], help="Device for computation")
     parser.add_argument('--node_feat', type=str, help="calibration type")
     parser.add_argument('--config', type=str, help="Path to JSON configuration file")
+    parser.add_argument('--initial_adj_method', type=str, help="initial_adj_method")
     return parser.parse_args()
 
 def load_json_config(json_path):
@@ -87,8 +88,8 @@ def main():
     df = pd.read_csv(args.data_path, index_col=0)
     df_train, df_test = split_train_test_vertically(df)  # Implement this function if not available
 
-    dataset_train = DatasetEmo(df_train, device=device, node_feat=args.node_feat)
-    dataset_test = DatasetEmo(df_test, device=device, node_feat=args.node_feat)
+    dataset_train = DatasetEmo(df_train, device=device, initial_adj_method = args.initial_adj_method,node_feat=args.node_feat)
+    dataset_test = DatasetEmo(df_test, device=device, initial_adj_method = args.initial_adj_method, node_feat=args.node_feat)
 
     graphs_list_train = dataset_train.get_graphs_list()
     graphs_list_test = dataset_test.get_graphs_list()
@@ -139,8 +140,10 @@ def main():
     )
     print("Training completed!")
 
-    file_name = 'GCNModel.pth'
+    file_name = f'data/results/GCN/GCNModel_{args.config.split('.')[0]}.pth'
     torch.save(model.state_dict(), file_name)
+    with open(f'data/results/GCN/GCNModel_results_{args.config.split('.')[0]}.pkl','wb') as f:
+        pkl.dump(results_dict,f)
 
 if __name__ == "__main__":
     main()
