@@ -10,7 +10,7 @@ param_grid = {
 
     "type_prediction": ["all_emo"], #all_emo, only ione emo e.e. "1"
     "type_dataset": ["balanced"], #balanced, unbalanced
-    "how_many_movies": [13], #how mna movies use to test the model, 1, 6, ...
+    "how_many_movies": [14], #how mna movies use to test the model, 1, 6, ...
     "use_one_sub": [False],
 
     # DATASET PARAMETERS
@@ -23,11 +23,11 @@ param_grid = {
     "test_train_splitting_mode": ["Vertical"],
     "window_half_size": [10],
     "node_feat": ["symmetricwindow"],
-    "initial_adj_method": ["FN_edgeAttr_FC_window"],#, "FN_edgeAttr_FC_window"],#FN_edgeAttr_FC_window, I
+    "initial_adj_method": ["clique_edgeAttr_FC_window"],#, "FN_edgeAttr_FC_window"],#FN_edgeAttr_FC_window, I
     "FN": ['Limbic'],#'Vis', 'SomMot', 'DorsAttn', 'SalVentAttn', 'Cont', 'Default', 'Sub'],
 
     # TRAINING PARAMETERS
-    "epochs": [50],
+    "epochs": [250],
     "lr": [0.001],
 }
 

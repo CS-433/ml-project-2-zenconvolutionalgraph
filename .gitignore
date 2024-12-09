@@ -7,3 +7,5 @@ old/*
 !data/results
 data/results/VIB/*
 data/results/GAT/*
+data/results/GCN/*
+

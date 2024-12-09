@@ -87,7 +87,7 @@ Usefull links:
 		- many differt combiuantrions of paramters + intiial grpahs creration
 
 
-WEDNESDAY
+MOANDAY 18:00
 - C
 	- put RF and KNN (both with feat and raw singaml )
 		- on git
