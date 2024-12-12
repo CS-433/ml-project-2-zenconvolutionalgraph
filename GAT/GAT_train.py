@@ -80,7 +80,12 @@ if args.type_prediction == "all_emo":
 else: #single emo
     # all oher emo gain specific class "77"
     # problem now of unbalance
-    df_all_movies.loc[~ df_all_movies.label.isin([int(x) for x in args.type_prediction]), "label"] = 77
+    print(f"predictin only emotion {args.type_prediction}")
+    df_all_movies.loc[
+        (~df_all_movies['label'].isin([args.type_prediction])) & (df_all_movies['label'] != -1), 
+        'label'
+    ] = 7
+    #df_all_movies.loc[~ df_all_movies.label.isin([int(x) for x in args.type_prediction]), "label"] = 77
 
 
 if args.how_many_movies == 1:
@@ -135,45 +140,45 @@ if args.use_one_sub:
 # with open(os.devnull, "w") as fnull:
 #     with redirect_stdout(fnull):
 dataset_train = DatasetEmo_fast(
-df = df_train, #df with mvoies to use
-node_feat = args.node_feat, #"singlefmri", "symmetricwindow", "pastwindow"
-initial_adj_method = args.initial_adj_method, #"clique_edgeAttr_FC_window", #"FN_edgeAttr_FC_window",
-    # "clique"
-    #FC dynamic:  "fcmovie", "fcwindow"
-    #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
-FN = args.FN,  #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
-FN_paths = "data/raw/FN_raw",
-sizewind = args.window_half_size,
-verbose = False,
-thr_FC = 0.7 #big windows requires smoaller thr
+    df = df_train, #df with mvoies to use
+    node_feat = args.node_feat, #"singlefmri", "symmetricwindow", "pastwindow"
+    initial_adj_method = args.initial_adj_method, #"clique_edgeAttr_FC_window", #"FN_edgeAttr_FC_window",
+        # "clique"
+        #FC dynamic:  "fcmovie", "fcwindow"
+        #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
+    FN = args.FN,  #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
+    FN_paths = "data/raw/FN_raw",
+    sizewind = args.window_half_size,
+    verbose = False,
+    thr_FC = 0.7, #big windows requires smoaller thr
+    kernelize_feat = args.kernelize_feat,
+    handcrafted_feat = args.handcrafted_feat
 )
 
 dataset_val = DatasetEmo_fast(
-df = df_val, #df with mvoies to use
-node_feat = args.node_feat, #"singlefmri", "symmetricwindow", "pastwindow"
-initial_adj_method = args.initial_adj_method, #"clique_edgeAttr_FC_window", #"FN_edgeAttr_FC_window",
-    # "clique"
-    #FC dynamic:  "fcmovie", "fcwindow"
-    #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
-FN = args.FN,  #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
-FN_paths = "data/raw/FN_raw",
-sizewind = args.window_half_size,
-verbose = False,
-thr_FC = 0.7 #big windows requires smoaller thr
+    df = df_val,
+    node_feat = args.node_feat,
+    initial_adj_method = args.initial_adj_method, 
+    FN = args.FN,  
+    FN_paths = "data/raw/FN_raw",
+    sizewind = args.window_half_size,
+    verbose = False,
+    thr_FC = 0.7,
+    kernelize_feat = args.kernelize_feat,
+    handcrafted_feat = args.handcrafted_feat
 )
 
 dataset_test = DatasetEmo_fast(
-df = df_test, #df with mvoies to use
-node_feat = args.node_feat, #"singlefmri", "symmetricwindow", "pastwindow"
-initial_adj_method = args.initial_adj_method, #"clique_edgeAttr_FC_window", #"FN_edgeAttr_FC_window",
-    # "clique"
-    #FC dynamic:  "fcmovie", "fcwindow"
-    #FN (subcorticla with clique): "FN_const" "FN_edgeAttr_FC_window" "FN_edgeAttr_FC_movie"
-FN = args.FN,  #['Vis' 'SomMot' 'DorsAttn' 'SalVentAttn' 'Limbic' 'Cont' 'Default' 'Sub']
-FN_paths = "data/raw/FN_raw",
-sizewind = args.window_half_size,
-verbose = False,
-thr_FC = 0.7 #big windows requires smoaller thr
+    df = df_test,
+    node_feat = args.node_feat, 
+    initial_adj_method = args.initial_adj_method,
+    FN = args.FN,  
+    FN_paths = "data/raw/FN_raw",
+    sizewind = args.window_half_size,
+    verbose = False,
+    thr_FC = 0.7,
+    kernelize_feat = args.kernelize_feat,
+    handcrafted_feat = args.handcrafted_feat
 )
 
 # Extarct the list of graphs of each dataset

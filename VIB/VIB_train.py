@@ -229,7 +229,8 @@ dataset_train = DatasetEmo_fast(
     FN_paths = "data/raw/FN_raw",
     sizewind = args.window_half_size,
     verbose = False,
-    thr_FC = args.thr_FC #big windows requires smoaller thr
+    thr_FC = args.thr_FC, #big windows requires smoaller thr
+    kernelize_feat = args.kernelize_feat
 )
 
 dataset_val = DatasetEmo_fast(
@@ -239,7 +240,8 @@ dataset_val = DatasetEmo_fast(
     FN_paths = "data/raw/FN_raw",
     sizewind = args.window_half_size,
     verbose = False,
-    thr_FC = args.thr_FC
+    thr_FC = args.thr_FC,
+    kernelize_feat = args.kernelize_feat
 )
 
 dataset_test = DatasetEmo_fast(
@@ -250,7 +252,8 @@ dataset_test = DatasetEmo_fast(
     FN_paths = "data/raw/FN_raw",
     sizewind = args.window_half_size,
     verbose = False,
-    thr_FC = args.thr_FC
+    thr_FC = args.thr_FC,
+    kernelize_feat = args.kernelize_feat
 )
 
 # Extarct the list of graphs of each dataset

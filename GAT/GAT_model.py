@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 
 class GATModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_heads=50, device = None):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_heads=13, device = None):
         super().__init__()
 
         # Set device (if not provided, use GPU if available, otherwise use CPU)
@@ -24,7 +24,14 @@ class GATModel(nn.Module):
                                 )
         
         # Linear Layer for classification (50 classes)
-        self.fc = nn.Linear(hidden_dim, output_dim)
+        #self.fc = nn.Linear(hidden_dim, output_dim)
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim*2),  # First linear layer
+            nn.ReLU(),                          # Activation function
+            nn.Linear(hidden_dim*2, hidden_dim*2),  # Second linear layer
+            nn.ReLU(),                          # Activation function
+            nn.Linear(hidden_dim*2, output_dim)   # Output layer
+        )
 
     def forward(self, data):
         # data is a Batch object that contains a batch of graphs
