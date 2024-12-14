@@ -88,8 +88,8 @@ def main():
     df = pd.read_csv(args.data_path, index_col=0)
     df_train, df_test = split_train_test_vertically(df)  # Implement this function if not available
 
-    dataset_train = DatasetEmo(df_train, device=device, initial_adj_method = args.initial_adj_method,node_feat=args.node_feat)
-    dataset_test = DatasetEmo(df_test, device=device, initial_adj_method = args.initial_adj_method, node_feat=args.node_feat)
+    dataset_train = DatasetEmo(df_train, device=device,FN = 'Limbic', initial_adj_method = args.initial_adj_method,node_feat=args.node_feat)
+    dataset_test = DatasetEmo(df_test, device=device,FN = 'Limbic', initial_adj_method = args.initial_adj_method, node_feat=args.node_feat)
 
     graphs_list_train = dataset_train.get_graphs_list()
     graphs_list_test = dataset_test.get_graphs_list()
