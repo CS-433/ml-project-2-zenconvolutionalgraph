@@ -5,8 +5,6 @@ Usefull links:
 - Paper Brain_GNN: (link)[https://www.sciencedirect.com/science/article/pii/S1361841521002784]
 
 
-
-
 # MICHAEL'S ANSWERS
 - take abs of z-correct 
     - very differt sing of emotion
@@ -24,7 +22,8 @@ Usefull links:
 
 - models
     - basline model
-      - knn   OK --> C
+      - KNN   OK --> C
+	  - RF    OK --> C
       - GCN   OK --> Z
       - FNN   OK --> G
     - lots of simple ones
@@ -75,8 +74,6 @@ Usefull links:
         	- why? beaocme the can ointerpest the attention weights as newtornds
         	- show the proposed strucutre (ine head ofr eahc emo)
         	- image??
-        - transf   --> 
-        - OpenGSL  --> C
     - lastly we decided to use a model not impe,mented by ourself, from a publication --> VIB
     	- why? 
     		- one complex from a paper --< paper looks promisng (used on simialr datasets to oiur)
@@ -88,22 +85,26 @@ Usefull links:
 			- whcih values did we choose --> why we cjhoose these values
 	- results
 		- many differt combiuantrions of paramters + intiial grpahs creration
-     - conclusion
-     	- why vib did not worked?
-     		-
-        - still
-        	- 
-- latex
-- presentation
 
 
-TODO TUESDAY
-- C: KNN AND RF --> with feats
-- C: OpenGSL --> 
-- Z: make GCN work + plot acc/loss
-- change the latex template
-- find bib for latex
-- ALL: try VIB
-- G: make latex and presenatation
+MOANDAY 18:00
+- C
+	- put RF and KNN (both with feat and raw singaml )
+		- on git
+		- on latex
+		- on presnation
+		- with final results
+- G
+	- gat 
+- Z
+	- gcn
+	- put resutl on latex and preseantion
+- ALL
+	- try some paramters of vib
+	- pipe: 1 movie 1 sun --> 8 mvoes 1 sub --> all
+- sevda
+	- not cite articel trnaofmers
+	- try with self loop
+
 
 # presenation:  17th tuesday 14:00 --> 10 min + 5 min
