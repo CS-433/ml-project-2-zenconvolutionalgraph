@@ -67,3 +67,5 @@ model, results_dict = GCN_train(model=model, optimizer=optimizer, loss_fn=loss_f
 
 with open('/home/zhzhou/GNN_E/data/results/GCN/GCNModel_result_all.pkl','wb') as f:
     pkl.dump(results_dict,f)
+with open('data/results/GCN/GCNModel_model_all.pkl','wb') as f:
+    pkl.dump(model.state_dict(), f)

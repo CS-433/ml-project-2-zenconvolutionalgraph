@@ -9,7 +9,7 @@ class SimpleGCN(nn.Module):
     def __init__(self, input_dim, hidden_dim1, hidden_dim2, output_dim):
         super().__init__()
         self.conv1 = pyg_nn.GCNConv(input_dim, hidden_dim1)
-        self.bn1 = pyg_nn.BatchNorm(hidden_dim1)
+        #self.bn1 = pyg_nn.BatchNorm(hidden_dim1)
         #self.conv2 = pyg_nn.GCNConv(hidden_dim1, hidden_dim2)
         self.linear = nn.Linear(hidden_dim1, output_dim)
         self.dropout = nn.Dropout(p=0.5)
@@ -21,7 +21,7 @@ class SimpleGCN(nn.Module):
     def forward(self, x, edge_index, batch):
         #print(x.shape)
         x = self.conv1(x, edge_index)
-        x = self.bn1(x)
+        #x = self.bn1(x)
         #x = global_max_pool(x, batch)
         #print(x.shape)
         #print(edge_index.min(), edge_index.max())
@@ -137,8 +137,8 @@ def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device,
             best_prediction = predicted_label
             best_model_state = model.state_dict()
             best_pred_y_train = pred_y_train
-        best_model_state = model.state_dict()
-        model.load_state_dict(best_model_state)
+        #best_model_state = model.state_dict()
+        #model.load_state_dict(best_model_state)
         all_labels = torch.cat(best_prediction).cpu().numpy()
     # Convert lists to standard Python types for JSON serialization
         results_dict = {
@@ -155,7 +155,10 @@ def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device,
         "y_train": torch.cat(y_train).cpu().numpy()
 
         }
-        with open('/home/zhzhou/GNN_E/data/results/GCN/GCNModel_result_sup_subject.pkl','wb') as f:
+        with open('/home/zhzhou/GNN_E/data/results/GCN/GCNModel_result_all.pkl','wb') as f:
             pkl.dump(results_dict,f)
+        with open('/home/zhzhou/GNN_E/data/results/GCN/GCNModel_model_all.pkl','wb') as f:
+            pkl.dump(best_model_state,f)
         print('Result saved!')
+    model.load_state_dict(best_model_state)
     return model, results_dict
