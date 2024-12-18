@@ -1,11 +1,13 @@
 scripts/__pycache__/*
-data/*
+__pycache__
 old
 old/*
-!data/assets
-!data/assets/*
-!data/results
+data/assets/*
+data/processed/*
 data/results/VIB/*
 data/results/GAT/*
 data/results/GCN/*
+data/*
+prediction_GAT.csv
+
 
