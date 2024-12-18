@@ -20,6 +20,64 @@ import gc
 from scipy.stats import skew, kurtosis
 from scipy.fft import fft
 from scipy.signal import correlate
+import argparse
+
+
+def parse_arguments():
+    # Function to parse command line arguments
+
+    # Set up argument parsing
+    parser = argparse.ArgumentParser()
+
+    # Add arguments with default values for dataset, suggested features, and prediction output
+    parser.add_argument(
+        "--dataset_path",
+        type=str,
+        default="data/processed/all_movies_labelled_13_single_balanced.csv",
+        help="Path to the data (default: data/processed/all_movies_labelled_13_single_balanced.csv)",
+    )
+
+    parser.add_argument(
+        "--FN_dir",
+        type=str,
+        default="data/raw/FN_raw",
+        help="Path to the dir where Functional Connectivities are stored (default: data/raw/FN_raw)",
+    )
+
+    parser.add_argument(
+        "--prediction_path",
+        type=str,
+        default="./prediction_GAT.csv",
+        help="Path to save the final predictions (default: ./prediction_GAT.csv)",
+    )
+
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        default="./data/assets/GAT_trained_model.pth",
+        help="Path of the trained model (default: ./data/assets/GAT_trained_model.pth)",
+    )
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Validate dataset directory
+    if not os.path.exists(args.dataset_path):
+        raise FileNotFoundError(
+            f"Error: The directory '{args.dataset_path}' does not exist."
+        )
+
+    # Validate FN directory
+    if not os.path.exists(args.FN_dir):
+        raise FileNotFoundError(
+            f"Error: The directory '{args.FN_dir}' does not exist."
+        )
+
+    if not os.listdir(args.FN_dir):
+        raise ValueError(f"Error: The directory '{args.FN_dir}' is empty.")
+
+    # Return parsed arguments
+    return args
 
 def extract_advanced_features(ts, complex_feats = False):
     features = [
@@ -115,8 +173,6 @@ def custom_corrcoef(x_matrix, thr = None):
     return corr_matrix
 
 
-
-
 class DatasetEmo_fast():
 
     def __init__(self,
@@ -202,7 +258,6 @@ class DatasetEmo_fast():
     
     def get_graphs_list_info(self):
         return self.graphs_list_info
-
 
 
 def parallelization_timepoint_per_movie_sub(
@@ -369,6 +424,191 @@ def parallelization_timepoint_per_movie_sub(
     torch.cuda.empty_cache()  # If using CUDA
 
     return graph, info_graph
+
+
+def split_train_test_vertically(df_all_movies, test_movies_dict = {"Sintel": 7, "TearsOfSteel": 10, "Superhero": 9}):
+    
+    # Extract code test movies
+    movie_names = df_all_movies.movie.unique()
+    test_movies = list(test_movies_dict.values())
+    train_movies = [movie for movie in movie_names if movie not in test_movies]
+
+    # Split the df with all movies in train and test
+    df_train = df_all_movies[df_all_movies.movie.isin(train_movies)]
+    df_test = df_all_movies[df_all_movies.movie.isin(test_movies)]
+
+    return df_train, df_test
+
+
+def split_train_val_test_horizontally(df_all_movies, percentage_train=0.8, percentage_val=0.0, path_pickle_delay="data/raw/labels/run_onsets.pkl", path_movie_title_mapping="data/raw/labels/category_mapping_movies.csv", tr_len=1.3):
+    """
+    Splits the movie data into train, validation, and test sets based on sequential timing.
+    The split is done based on the movie's timeline, ensuring no randomization.
+
+    Args:
+    - df_all_movies: DataFrame containing all movie data with timestamps and labels.
+    - percentage_train: Proportion of the movie's data to be used for training.
+    - percentage_val: Proportion of the movie's data to be used for validation.
+    - path_pickle_delay: Path to the pickle file containing the onsets of the movies.
+    - path_movie_title_mapping: Path to the CSV file mapping movie titles to numeric ids.
+    - tr_len: Length of each time step in seconds (TR length).
+
+    Returns:
+    - df_train: DataFrame with updated labels for training data.
+    - df_val: DataFrame with updated labels for validation data.
+    - df_test: DataFrame with updated labels for test data.
+    """
+    # Load the onset times for different subjects in different movies
+    with open(path_pickle_delay, "rb") as file:
+        delta_time = pkl.load(file)
+
+    # Load mapping of movie title to movie ID
+    df_movie_mapping = pd.read_csv(path_movie_title_mapping)
+
+    # Create empty DataFrames for train, validation, and test
+    df_train = df_all_movies.copy()
+    df_val = df_all_movies.copy()
+    df_test = df_all_movies.copy()
+
+    # Loop through each movie to perform the sequential split
+    movies = df_all_movies["movie"].unique()
+
+    for movie in movies:
+        # Retrieve the movie string name
+        movie_str = df_movie_mapping[df_movie_mapping.movie == movie]["movie_str"].values[0]
+        
+        # Access the dictionary of subjects for this movie
+        subject_onsets = delta_time[movie_str]
+        
+        # Assume we are working with the first subject
+        first_subject = next(iter(subject_onsets))
+        
+        # Retrieve the start time and duration of the movie for this subject
+        start_movie_tr, length_movie_tr = subject_onsets[first_subject]
+
+        # Add delay
+        start_movie_tr += 4 #4TR
+        
+        # Define the splitting points based on the percentages
+        end_train_set = start_movie_tr + int(length_movie_tr * percentage_train)
+        end_val_set = end_train_set + int(np.ceil(length_movie_tr * percentage_val))
+
+        print(f"\nMovie: {movie_str}")
+        print(f"  Start Time (TR)+4: {start_movie_tr}")
+        print(f"  Total Length (TR): {length_movie_tr}")
+        print(f"  Train End (TR): {end_train_set}")
+        print(f"  Validation End (TR): {end_val_set}")
+        print(f"  Movie End (TR): {start_movie_tr + length_movie_tr}")
+        
+        # Train set: Data before the train split point
+        df_train.loc[(df_train.movie == movie) & (df_train.timestamp_tr > end_train_set), "label"] = -1
+        
+        # Validation set: Data between the train and validation split points
+        df_val.loc[(df_val.movie == movie) & (df_val.timestamp_tr <= end_train_set), "label"] = -1
+        df_val.loc[(df_val.movie == movie) & (df_val.timestamp_tr > end_val_set), "label"] = -1
+
+        
+        # Test set: Data after the validation split point
+        df_test.loc[(df_test.movie == movie) & (df_test.timestamp_tr <= end_val_set), "label"] = -1
+
+    return df_train, df_val, df_test
+
+
+def split_train_test_rest_classification(df_all_movies, df_rest):
+
+    df_all_movies = df_all_movies.copy()
+    df_rest = df_rest.copy()
+
+    # chage the label, now they should be binary
+        # 0 = rest
+        # 1 = movie
+    df_rest.loc[df_rest.label != -1, "label"] = 0 #-1 indicates timepoitns to not classifify
+    df_all_movies.loc[df_all_movies.label != -1, "label"] = 1
+    
+    # Take a single movie, alredy checjed that isnde there is a similar number of timepotis to classify as in rest
+    df_single_movie = df_all_movies[df_all_movies.movie == 0]
+
+    df_merge = pd.concat([df_single_movie, df_rest])
+
+    # Create train and test
+        #Attnetion : they are the same df
+        # the only differce is that the column label will assume -1 in difert ways
+    # split horizontally
+    thr_hor = 350
+    df_train = df_merge.copy()
+    df_train.loc[df_train.timestamp_tr > thr_hor, "label"] = -1
+    df_test = df_merge.copy()
+    df_test.loc[df_test.timestamp_tr <= thr_hor, "label"] = -1
+
+    # how many classificable timepoitn soin each df
+    print("Classificable timepoints in train and test")
+
+    print(df_train[(df_train.label != -1) & (df_train.id == 1) & (df_train.vindex == 0)]["label"].value_counts().sum())
+    print(df_train[(df_train.id == 1) & (df_train.vindex == 0)]["label"].value_counts())
+
+    print(df_test[(df_test.label != -1) & (df_test.id == 1) & (df_test.vindex == 0)]["label"].value_counts().sum())
+    print(df_test[(df_test.id == 1) & (df_test.vindex == 0)]["label"].value_counts())
+
+    return df_train, df_test
+
+
+def create_feature_label_tensors_for_FNN(df, sizewind=4):
+    X = []
+    y = []
+    
+    # Loop through unique movies in the dataset
+    movies = df["movie"].unique()
+    print(f"Movies in this df: {movies}")
+
+    for movie in movies:
+        df_single_movie = df[df.movie == movie]
+        subjects = df_single_movie["id"].unique()
+
+        for sub in subjects:
+            df_single_movie_sub = df_single_movie[df_single_movie.id == sub]
+            # Timepoints to predict
+            timepoints = df_single_movie_sub[df_single_movie_sub.label != -1]["timestamp_tr"].unique()
+            # Order rows by 'vindex'
+            df_single_movie_sub = df_single_movie_sub.sort_values(by="vindex")
+
+            for timepoint in timepoints:
+                print(f"Processing movie: {movie}, subject: {sub}, timepoint: {timepoint - timepoints[0]}/{len(timepoints)}")
+
+                # Select data for a symmetric window around the timepoint
+                time_around = [i for i in range(timepoint - sizewind, timepoint + sizewind + 1)]
+                x = df_single_movie_sub.loc[df_single_movie_sub.timestamp_tr.isin(time_around), ["vindex", "score", "timestamp_tr"]]
+                x = x.pivot(index="vindex", columns="timestamp_tr", values="score")
+                x_matrix = torch.tensor(x.values, dtype=torch.float)
+
+                # Label
+                label = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]["label"].unique()[0]
+                y_value = torch.tensor(label, dtype=torch.long)
+                # Append the feature and label tensors to lists
+                X.append(x_matrix)
+                y.append(y_value)
+    
+    # Concatenate the list of feature and label tensors into final tensors
+    X = torch.stack(X)
+    y = torch.tensor(y, dtype=torch.long)
+
+    return X, y
+
+
+def gpu_mem():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+
+        # Memory allocated on the current GPU device
+        allocated_memory = torch.cuda.memory_allocated(device)
+        
+        # Memory reserved (cached) by PyTorch on the current GPU device
+        reserved_memory = torch.cuda.memory_reserved(device)
+
+        # Print memory in bytes, you can divide by (1024**2) to convert to MB
+        print(f"\nMemory Allocated: {allocated_memory / (1024**2):.2f} MB")
+        print(f"Memory Reserved: {reserved_memory / (1024**2):.2f} MB\n")
+    else:
+        print("No GPU available")
 
 
 
@@ -570,283 +810,6 @@ def parallelization_timepoint_per_movie_sub(
     
 #     def get_graphs_list_info(self):
 #         return self.graphs_list_info
-
-
-def split_train_test_vertically(df_all_movies, test_movies_dict = {"Sintel": 7, "TearsOfSteel": 10, "Superhero": 9}):
-    
-    # Extract code test movies
-    movie_names = df_all_movies.movie.unique()
-    test_movies = list(test_movies_dict.values())
-    train_movies = [movie for movie in movie_names if movie not in test_movies]
-
-    # Split the df with all movies in train and test
-    df_train = df_all_movies[df_all_movies.movie.isin(train_movies)]
-    df_test = df_all_movies[df_all_movies.movie.isin(test_movies)]
-
-    return df_train, df_test
-
-
-def split_train_val_test_horizontally(df_all_movies, percentage_train=0.8, percentage_val=0.0, path_pickle_delay="data/raw/labels/run_onsets.pkl", path_movie_title_mapping="data/raw/labels/category_mapping_movies.csv", tr_len=1.3):
-    """
-    Splits the movie data into train, validation, and test sets based on sequential timing.
-    The split is done based on the movie's timeline, ensuring no randomization.
-
-    Args:
-    - df_all_movies: DataFrame containing all movie data with timestamps and labels.
-    - percentage_train: Proportion of the movie's data to be used for training.
-    - percentage_val: Proportion of the movie's data to be used for validation.
-    - path_pickle_delay: Path to the pickle file containing the onsets of the movies.
-    - path_movie_title_mapping: Path to the CSV file mapping movie titles to numeric ids.
-    - tr_len: Length of each time step in seconds (TR length).
-
-    Returns:
-    - df_train: DataFrame with updated labels for training data.
-    - df_val: DataFrame with updated labels for validation data.
-    - df_test: DataFrame with updated labels for test data.
-    """
-    # Load the onset times for different subjects in different movies
-    with open(path_pickle_delay, "rb") as file:
-        delta_time = pkl.load(file)
-
-    # Load mapping of movie title to movie ID
-    df_movie_mapping = pd.read_csv(path_movie_title_mapping)
-
-    # Create empty DataFrames for train, validation, and test
-    df_train = df_all_movies.copy()
-    df_val = df_all_movies.copy()
-    df_test = df_all_movies.copy()
-
-    # Loop through each movie to perform the sequential split
-    movies = df_all_movies["movie"].unique()
-
-    for movie in movies:
-        # Retrieve the movie string name
-        movie_str = df_movie_mapping[df_movie_mapping.movie == movie]["movie_str"].values[0]
-        
-        # Access the dictionary of subjects for this movie
-        subject_onsets = delta_time[movie_str]
-        
-        # Assume we are working with the first subject
-        first_subject = next(iter(subject_onsets))
-        
-        # Retrieve the start time and duration of the movie for this subject
-        start_movie_tr, length_movie_tr = subject_onsets[first_subject]
-
-        # Add delay
-        start_movie_tr += 4 #4TR
-        
-        # Define the splitting points based on the percentages
-        end_train_set = start_movie_tr + int(length_movie_tr * percentage_train)
-        end_val_set = end_train_set + int(np.ceil(length_movie_tr * percentage_val))
-
-        print(f"\nMovie: {movie_str}")
-        print(f"  Start Time (TR)+4: {start_movie_tr}")
-        print(f"  Total Length (TR): {length_movie_tr}")
-        print(f"  Train End (TR): {end_train_set}")
-        print(f"  Validation End (TR): {end_val_set}")
-        print(f"  Movie End (TR): {start_movie_tr + length_movie_tr}")
-        
-        # Train set: Data before the train split point
-        df_train.loc[(df_train.movie == movie) & (df_train.timestamp_tr > end_train_set), "label"] = -1
-        
-        # Validation set: Data between the train and validation split points
-        df_val.loc[(df_val.movie == movie) & (df_val.timestamp_tr <= end_train_set), "label"] = -1
-        df_val.loc[(df_val.movie == movie) & (df_val.timestamp_tr > end_val_set), "label"] = -1
-
-        
-        # Test set: Data after the validation split point
-        df_test.loc[(df_test.movie == movie) & (df_test.timestamp_tr <= end_val_set), "label"] = -1
-
-    return df_train, df_val, df_test
-
-
-def split_train_test_rest_classification(df_all_movies, df_rest):
-
-    df_all_movies = df_all_movies.copy()
-    df_rest = df_rest.copy()
-
-    # chage the label, now they should be binary
-        # 0 = rest
-        # 1 = movie
-    df_rest.loc[df_rest.label != -1, "label"] = 0 #-1 indicates timepoitns to not classifify
-    df_all_movies.loc[df_all_movies.label != -1, "label"] = 1
-    
-    # Take a single movie, alredy checjed that isnde there is a similar number of timepotis to classify as in rest
-    df_single_movie = df_all_movies[df_all_movies.movie == 0]
-
-    df_merge = pd.concat([df_single_movie, df_rest])
-
-    # Create train and test
-        #Attnetion : they are the same df
-        # the only differce is that the column label will assume -1 in difert ways
-    # split horizontally
-    thr_hor = 350
-    df_train = df_merge.copy()
-    df_train.loc[df_train.timestamp_tr > thr_hor, "label"] = -1
-    df_test = df_merge.copy()
-    df_test.loc[df_test.timestamp_tr <= thr_hor, "label"] = -1
-
-    # how many classificable timepoitn soin each df
-    print("Classificable timepoints in train and test")
-
-    print(df_train[(df_train.label != -1) & (df_train.id == 1) & (df_train.vindex == 0)]["label"].value_counts().sum())
-    print(df_train[(df_train.id == 1) & (df_train.vindex == 0)]["label"].value_counts())
-
-    print(df_test[(df_test.label != -1) & (df_test.id == 1) & (df_test.vindex == 0)]["label"].value_counts().sum())
-    print(df_test[(df_test.id == 1) & (df_test.vindex == 0)]["label"].value_counts())
-
-    return df_train, df_test
-
-
-def create_feature_label_tensors_for_FNN(df, sizewind=4):
-    X = []
-    y = []
-    
-    # Loop through unique movies in the dataset
-    movies = df["movie"].unique()
-    print(f"Movies in this df: {movies}")
-
-    for movie in movies:
-        df_single_movie = df[df.movie == movie]
-        subjects = df_single_movie["id"].unique()
-
-        for sub in subjects:
-            df_single_movie_sub = df_single_movie[df_single_movie.id == sub]
-            # Timepoints to predict
-            timepoints = df_single_movie_sub[df_single_movie_sub.label != -1]["timestamp_tr"].unique()
-            # Order rows by 'vindex'
-            df_single_movie_sub = df_single_movie_sub.sort_values(by="vindex")
-
-            for timepoint in timepoints:
-                print(f"Processing movie: {movie}, subject: {sub}, timepoint: {timepoint - timepoints[0]}/{len(timepoints)}")
-
-                # Select data for a symmetric window around the timepoint
-                time_around = [i for i in range(timepoint - sizewind, timepoint + sizewind + 1)]
-                x = df_single_movie_sub.loc[df_single_movie_sub.timestamp_tr.isin(time_around), ["vindex", "score", "timestamp_tr"]]
-                x = x.pivot(index="vindex", columns="timestamp_tr", values="score")
-                x_matrix = torch.tensor(x.values, dtype=torch.float)
-
-                # Label
-                label = df_single_movie_sub[df_single_movie_sub.timestamp_tr == timepoint]["label"].unique()[0]
-                y_value = torch.tensor(label, dtype=torch.long)
-                # Append the feature and label tensors to lists
-                X.append(x_matrix)
-                y.append(y_value)
-    
-    # Concatenate the list of feature and label tensors into final tensors
-    X = torch.stack(X)
-    y = torch.tensor(y, dtype=torch.long)
-
-    return X, y
-
-def gpu_mem():
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-
-        # Memory allocated on the current GPU device
-        allocated_memory = torch.cuda.memory_allocated(device)
-        
-        # Memory reserved (cached) by PyTorch on the current GPU device
-        reserved_memory = torch.cuda.memory_reserved(device)
-
-        # Print memory in bytes, you can divide by (1024**2) to convert to MB
-        print(f"\nMemory Allocated: {allocated_memory / (1024**2):.2f} MB")
-        print(f"Memory Reserved: {reserved_memory / (1024**2):.2f} MB\n")
-    else:
-        print("No GPU available")
-
-
-
-
-
-# class GraphEmo(Data):
-
-#     # Create a graph for
-#         # single person
-#         # single movie
-#         # single timepoint
-
-#     def __init__(self, x=None, edge_index=None, edge_attr=None, y=None, adj = None, movie=None, subject=None, timestamp_tr=None):
-        
-#         # In case a specific adj is passed, used it for the connectivity
-#         if adj != None:
-#             # Create edge_index tensor
-#             edge_index = torch.tensor(adj.nonzero().t().contiguous(), dtype=torch.long)  # Shape: [2, num_edges]
-#             print(edge_index)
-#             print(edge_index.shape)
-#             # Create edge attributes: weights can be set as 1 or extracted from the adj_matrix if applicable
-#             edge_attr = torch.tensor(adj[edge_index[0, :], edge_index[1, :]], dtype=torch.float)
-#             print(edge_attr)
-#             print(edge_attr.shape)
-        
-#         # build adj from adge attr and index 
-#         if adj == None:
-#             adj = to_dense_adj(edge_index=edge_index, edge_attr=edge_attr)
-   
-#         super(GraphEmo, self).__init__(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-
-#         # Add attr
-#         self.movie = movie
-#         self.subject = subject
-#         self.timestamp_tr = timestamp_tr
-#         self.adj = adj
-
-
-# class DatasetEmo(Dataset):
-
-#     def __init__(self, data_path):
-
-#         super(DatasetEmo, self).__init__()
-
-#         self.all_graphs = []
-#         self.all_labels = []
-
-#         for file in os.listdir(data_path):
-#             file_path = os.path.join(data_path, file)  # Construct the full path
-
-#             graph = torch.load(file_path)
-
-#             self.all_graphs.append(graph)
-#             self.all_labels.append(graph.y)
-
-
-#         self.n_samples = len(self.all_graphs)
-
-#     def __getitem__(self, index):
-#         graph = self.all_graphs[index]
-#         return graph, self.all_labels[index]
-    
-#     def __len__(self):
-#         return self.n_samples
-
-# class DataLoaderEmo():
-
-#     def __init__(self, dataset, batch_size=32, shuffle=False):
-#         self.dataset = dataset
-#         self.batch_size = batch_size
-#         self.shuffle = shuffle
-
-
-#     def __iter__(self):
-#         # Iterate through the dataset in batches
-
-#         indices = list(range(len(self.dataset))) #[0, 1, 2, ...]
-        
-#         if self.shuffle:
-#             # Shuffle the indices using torch.randperm
-#             indices = torch.randperm(len(self.dataset)).tolist()
-
-#         for start_idx in range(0, len(indices), self.batch_size):
-#             batch_indices = indices[start_idx:start_idx + self.batch_size]
-#             batch_data = [self.dataset[idx] for idx in batch_indices] # Attentin, each elemt of the lsit is a tuple (graph, label)
-            
-#             batched_graphs, batched_labels = zip(*batch_data)  # Unzip the batch into graphs and labels
-#             batched_labels = torch.tensor(batched_labels, dtype=torch.long)
-
-#             # yield an output in the tuple (bathced_graph, batched labels)
-#             yield batched_graphs, batched_labels
-
-
 
 
 

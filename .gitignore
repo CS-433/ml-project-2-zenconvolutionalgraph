@@ -2,7 +2,6 @@ scripts/__pycache__/*
 __pycache__
 old
 old/*
-data/assets/*
 data/processed/*
 data/results/*
 data/raw/*
@@ -11,5 +10,4 @@ data/results/GAT/*
 data/results/GCN/*
 data/*
 prediction_GAT.csv
-
 

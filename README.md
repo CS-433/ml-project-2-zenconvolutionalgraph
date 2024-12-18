@@ -2,28 +2,37 @@
 
 **Graph Neural Network without predefined graphs on Emo-FilM dataset**
 
+Please refer to:
+- the [latex report]() for in detail explanation of the project
+- the [presentation](GNN_E_MIP:Lab_presentation.pdf) given to the MIP:Lab for general overview of the project
+
 ## Table of Contents
 1. [Introduction](#introduction)
-2. [Project Structure](#project-structure)
-3. [Installation](#installation)
-4. [Usage](#usage)
-5. [Authors](#authors)
+2. [Getting Started](#getting-started)
+3. [Data preprocessing](#data-preprocessing)
+4. [Reproduce Results](#reproduce-results)
+5. [Interpretation](#interpretation)
+
+6. [Authors](#authors)
 
 
 ## Introduction
 
+
+
 This project focuses on emotion classification using fMRI data collected during a movie-watching paradigm. We compare **Graph Neural Networks (GNNs)** with traditional machine learning models such as Random Forest and K-Nearest Neighbors (KNN).
 
-While advanced models, including **Graph Attention Networks (GAT)** and **Variational Information Bottleneck (VIB)**, were explored with **Graph Structure Learning (GSL)** techniques.
+ In this study, we aim **not only** to classify emotions but also to **uncover latent networks that may emerge during different emotional states.** To achieve this, we apply Graph Structure Learning (GSL) techniques, such as VIB model.
+
 
 This repository provides the codebase for implementing and evaluating these methods, enabling further exploration of emotion classification from neuroimaging data.
 
-The pipeline of our project is shown as follows:
+The pipeline of our project is shown as follows: Participants watch movies inside an fMRI machine, during which BOLD signals are recorded. The recorded signals are then preprocessed, polished, and parcellated using the Schaefer atlas. Subsequently, the raw time series data is merged with an initially imputed connectivity matrix to create an initial input graph for each timepoint, corresponding to each movie for every subject. These graphs are then passed to a machine learning model. The model predicts both the target label for the current timepoint and a refined version of the initial connectivity. This refined connectivity aims to represent the learned emotional network as inferred by the model.
 
 ![pipeline](data/assets/frmi_pipeline.png)
 
 
-## Project Structure
+<!-- ## Project Structure
 
 Here is an overview of the repository organization of the project:
 
@@ -74,13 +83,15 @@ Here is an overview of the repository organization of the project:
     ├── VIB.ipynb
     └── VIB_train.py
 
-```
+``` -->
 
-## Installation
+## Getting Started
 
-Follow these steps to set up the environment and run the project:
+The provided code was tested with Python 3.12.5 and CUDA Version 11.6.
 
-1. **Clone the repository**:
+**Before running the project, please ensure you:**
+
+1. **Clone this repository repository**:
 
 ```bash
 git clone https://github.com/CS-433/ml-project-2-zenconvolutionalgraph.git
@@ -93,20 +104,15 @@ python3 -m venv myenv
 source myenv/bin/activate
 ```
 
-3. **Install dependencies**:
+3. **Install dependencies from [requirements.txt](requirements.txt)**:
 ```
 pip install -r requirements.txt
 ```
 
-4.(optional) Install additional tools if using GPUs(CUDA, cuDNN).
+4. **Ensure to have downloaded all the necessary data**: 
+The multimodal dataset Emo-filM is firstly released in the paper [**Emo-FilM: A multimodal dataset for affective neuroscience using naturalistic stimuli**](https://doi.org/10.1101/2024.02.26.582043). The Emo-FilM dataset is a highly sensitive resource, containing brain activity data that requires careful handling due to ethical and privacy concerns. In light of these considerations, the dataset has not been made publicly available in this repository. To obtain access to the Emo-FilM dataset, interested parties must apply at the [MIP:Lab](https://miplab.epfl.ch/) from EPFL. 
 
-## Usage
-
-1. **Access to the dataset:**
-
-The multimodal dataset Emo-filM is firstly released in the paper [**Emo-FilM: A multimodal dataset for affective neuroscience using naturalistic stimuli**](https://doi.org/10.1101/2024.02.26.582043). The Emo-FilM dataset is a highly sensitive resource, containing brain activity data that requires careful handling due to ethical and privacy concerns. In light of these considerations, the dataset has not been made publicly available in this repository. To obtain access to the Emo-FilM dataset, interested parties must apply at the [MIP:Lab](https://miplab.epfl.ch/) from EPFL.
-
-2. **Make sure the dataset is strcutured in the following way:**
+5. **Make sure the dataset is structured in the following way:**
 
 ```bash
 data
@@ -115,8 +121,8 @@ data
 │   └── all_movies_labelled_13_single.csv
 ├── raw
 │   ├── FN_raw
-│   │   ├── FN_Cont.csv
-│   │   ├── FN_....csv
+│   │   ├── FN_Vis.csv
+│   │   ├── ...
 │   ├── labels
 │   │   ├── Annot_13_AfterTheRain_stim.tsv
 │   │   ├── Annot_13_..._stim.tsv
@@ -127,13 +133,19 @@ data
 └── results
 ```
 
-3. **Explanatory Data Analysis:**
 
-Run the jupyter notebook ``./EDA/0_explore_dataset.ipynb`` for Explanatory Data Analysis to get yourself familiar with the dataset and its relative structure.
 
-4. **Data Preprocessing**:
+## Data preprocessing
 
-Run the jupyter notebook ``./EDA/1_create_dataset.ipynb`` to create a ``.csv`` file with a raw fMRI value of all the subjects of all the movies, which can be used in all the analysis of the project (detailed in the jupyter notebook). More specifically, the data prepocessing steps are:
+In case the access to the data will be granted, the user **will necessitate to preprocess** the given data, as the following models will work with a refined version of the Emo-FilM dataset.
+
+1. **Explanatory Data Analysis:**
+
+Run the jupyter [notebook](/EDA/0_explore_dataset.ipynb) for Explanatory Data Analysis to get yourself familiar with the dataset and its relative structure.
+
+2. **Data Preprocessing**:
+
+Run the jupyter [notebook](./EDA/1_create_dataset.ipynb) to create a ``.csv`` file with a raw fMRI value of all the subjects of all the movies, which can be **used in all the analysis of the project**. More specifically, the data prepocessing steps are:
 
 - Merge all the labelling dataset together.  
 - Choose how to extract labels for each time point from the raw scores.      The approach followed in this study: extract a single emotion for each time point by selecting the emotion with the maximum absolute score value. (Other label extraction strategies can be found in the notebook.)
@@ -143,19 +155,35 @@ Run the jupyter notebook ``./EDA/1_create_dataset.ipynb`` to create a ``.csv`` f
 - Balance the dataset using downsampling.
 - (Optional) Dataframes containing information relative to each FN (functional network) can be generated. This step is necessary only if FNs are used in the following analysis.
 
-- **Important Notes**: Due to dataset rebalancing and the fact that the fMRI session is longer than the movie duration, some time points will need to be predicted. This situation is encoded by assigning a label of -1 to these points. Be careful when proceeding with the analysis. All scripts for different machine learning methods start their analysis from the CSV file obtained in this step.
+**Important Notes**: Due to dataset rebalancing and the fact that the fMRI session is longer than the movie duration, some time points will **NOT** need to be predicted. This situation is encoded by assigning a **label of -1** to these points. Be careful when proceeding with the analysis. All scripts for different machine learning methods start their analysis from the CSV file obtained in this step.
 
-5. **Run the model**: KNN, RF, and FNN can be run easily using their respective notebooks. GCN can be run using the file ``GCN_train.py``, and users can change the hyperparameters of the GCN model using the configuration file ``GCN/args/config.json``.
+## Reproduce Results
 
-GAT and VIB require a specific structure to execute due to the high number of hyperparameters. Each model has:
+Three different modalities can be used to replicate the analysis:
 
-``*_model.py`` (inner script): Runs the actual analysis.  
-``*_gridsearch.py`` (outer script): Runs a grid search (or a single run) of the inner script. This structure provides an easy wrapper for new users who want to experiment with the hyperparameters without modifying the inner logic.
+1. **Baseline Models: KNN, RF, FNN** can be run easily using their respective notebooks.
+
+2. **GSL Models: GAT and VIB** can be run with using the wrapper file ``*_gridsearch.py`` (outer script), which run a grid search (or a single run) of the inner script. This structure provides an easy wrapper for new users who want to experiment with the hyperparameters without modifying the inner logic. For each oth those model is also present:
+    - ``*_model.py`` (inner script): contain the class and useful function for that model.
+    - ``*_train.py`` (inner script): Runs the actual analysis and train the model (in invoked by gridsearch scirpt.)
+
+3. **Run.py**: Script to reproduce the results of our best GAT model on the training set. Even if KNN achieved the best overall accuracy (~9%), we decided to report GAT first because it is more complex and was the GSL method that obtained better results. 
+
+**Note**: remember before running the scripts, to ask permission to download the dataset and preprocess it as described in points above.
+
+
+## Interpretation
+As an important part of the study is to learn the hidden representation of emotions as networks inside the brain, significant attention was given to **how to interpret the results of the GSL method**. Using the [notebook](GAT/plot_attention_weights.ipynb), it is possible to visualize the attention values and thus the latent connections built by the GAT model. Using the [notebook](VIB/interpretation_VIB.ipynb), it is possible to observe the average graph lengths for each emotion using the VIB method.
+
+
+![Visualization of GAT attention heads](data/assets/gat_attention_heads.png)**Visualization of GAT attention heads**
+
+
 
 ## Authors
 
 The authors of the project are: 
 
-- Cristiano Sartori (Cyber Security, 396315)   
-- Gabriele Dall’Aglio (Neuro-X, 377397)  
-- Zhuofu Zhou  (Financial Engineering, 370337)
+- Gabriele Dall'Aglio (Neuro-X)  ([@8gabri8](https://github.com/8gabri8))
+- Zhuofu Zhou (Financial Engineering) ([@floydchow7](https://github.com/floydchow7))
+- Cristiano Sartori (Cyber Security) ([@Eieusis](https://github.com/Eieusis))
