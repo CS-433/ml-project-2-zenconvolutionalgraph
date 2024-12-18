@@ -3,7 +3,7 @@
 **Graph Neural Network without predefined graphs on Emo-FilM dataset**
 
 Please refer to:
-- the [latex report]() for in detail explanation of the project
+- the [latex report](GNN_E_MIP:Lab_report.pdf) for in detail explanation of the project
 - the [presentation](GNN_E_MIP:Lab_presentation.pdf) given to the MIP:Lab for general overview of the project
 
 ## Table of Contents
@@ -163,7 +163,8 @@ Run the jupyter [notebook](./EDA/1_create_dataset.ipynb) to create a ``.csv`` fi
 
 Three different modalities can be used to replicate the analysis:
 
-1. **Baseline Models: KNN, RF, FNN** can be run easily using their respective notebooks.
+1. **Baseline Models: KNN, RF, FNN** can be run easily using their respective notebooks. **GCN** can be run using the `GCN_train.py`, and the `args/config.json` can be used to set the hyperparameters of the GCN model.
+
 
 2. **GSL Models: GAT and VIB** can be run with using the wrapper file ``*_gridsearch.py`` (outer script), which run a grid search (or a single run) of the inner script. This structure provides an easy wrapper for new users who want to experiment with the hyperparameters without modifying the inner logic. For each oth those model is also present:
     - ``*_model.py`` (inner script): contain the class and useful function for that model.
