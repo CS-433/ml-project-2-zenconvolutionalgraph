@@ -9,5 +9,7 @@ data/results/VIB/*
 data/results/GAT/*
 data/results/GCN/*
 data/*
+!data/assets/
+!data/assets/gat_attention_heads.png
 prediction_GAT.csv
 
