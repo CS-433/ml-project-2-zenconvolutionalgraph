@@ -34,7 +34,6 @@ import pandas as pd
 import torch
 from math import ceil
 from utils_models import *
-from scripts.models import *
 from GCN_models import *
 from torch_geometric.loader import DataLoader
 
