@@ -136,6 +136,6 @@ GCN, GAT, and VIB require a specific structure to execute due to the high number
 
 The authors of the project are: 
 
-- Cristiano Sartori (Cyber Security, XXXXXX)   
-- Gabriele Dall’Aglio (Neuro-X, XXXXXX)  
+- Cristiano Sartori (Cyber Security, 396315)   
+- Gabriele Dall’Aglio (Neuro-X, 377397)  
 - Zhuofu Zhou  (Financial Engineering, 370337)
