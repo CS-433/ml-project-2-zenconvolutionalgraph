@@ -1,4 +1,4 @@
-# CS-403 Machine Learning Project 2: Emotion Classification and Network Discovery: GNNs Without Predefined Graphs 
+# CS-433 Machine Learning Project 2: Emotion Classification and Network Discovery: GNNs Without Predefined Graphs 
 
 **Graph Neural Network without predefined graphs on Emo-FilM dataset**
 
@@ -83,8 +83,8 @@ Follow these steps to set up the environment and run the project:
 1. **Clone the repository**:
 
 ```bash
-git clone https://github.com/8gabri8/GNN_E
-cd GNN_E
+git clone https://github.com/CS-433/ml-project-2-zenconvolutionalgraph.git
+cd ml-project-2-zenconvolutionalgraph
 ```
 
 2. **Set up a virtual enviornment**:
@@ -104,13 +104,32 @@ pip install -r requirements.txt
 
 1. **Access to the dataset:**
 
-The multimodal dataset Emo-filM is firstly released in the paper [**Emo-FilM: A multimodal dataset for affective neuroscience using naturalistic stimuli**](https://www.biorxiv.org/content/10.1101/2024.02.26.582043v1). To get access to the dataset, please apply for access from the [MIP:Lab](https://miplab.epfl.ch/) from EPFL.
+The multimodal dataset Emo-filM is firstly released in the paper [**Emo-FilM: A multimodal dataset for affective neuroscience using naturalistic stimuli**](https://doi.org/10.1101/2024.02.26.582043). The Emo-FilM dataset is a highly sensitive resource, containing brain activity data that requires careful handling due to ethical and privacy concerns. In light of these considerations, the dataset has not been made publicly available in this repository. To obtain access to the Emo-FilM dataset, interested parties must apply at the [MIP:Lab](https://miplab.epfl.ch/) from EPFL.
 
 2. **Make sure the dataset is strcutured in the following way:**
 
+```bash
+data
+├── assets
+├── processed
+│   └── all_movies_labelled_13_single.csv
+├── raw
+│   ├── FN_raw
+│   │   ├── FN_Cont.csv
+│   │   ├── FN_....csv
+│   ├── labels
+│   │   ├── Annot_13_AfterTheRain_stim.tsv
+│   │   ├── Annot_13_..._stim.tsv
+│   │   └── run_onsets.pkl
+│   └── movies
+│       ├── AfterTheRain_compiled414.csv
+│       ├── ..._compiled414.csv
+└── results
+```
+
 3. **Explanatory Data Analysis:**
 
-Run the jupyter notebook ``./EDA/0_explore_dataset.ipynb`` for Explanatory Data Analysis to get yourself famailar with the dataset and its relative structure.
+Run the jupyter notebook ``./EDA/0_explore_dataset.ipynb`` for Explanatory Data Analysis to get yourself familiar with the dataset and its relative structure.
 
 4. **Data Preprocessing**:
 
@@ -126,12 +145,12 @@ Run the jupyter notebook ``./EDA/1_create_dataset.ipynb`` to create a ``.csv`` f
 
 - **Important Notes**: Due to dataset rebalancing and the fact that the fMRI session is longer than the movie duration, some time points will need to be predicted. This situation is encoded by assigning a label of -1 to these points. Be careful when proceeding with the analysis. All scripts for different machine learning methods start their analysis from the CSV file obtained in this step.
 
-5. **Run the model**: KNN, RF, and FNN can be run easily using their respective notebooks.
+5. **Run the model**: KNN, RF, and FNN can be run easily using their respective notebooks. GCN can be run using the file ``GCN_train.py``, and users can change the hyperparameters of the GCN model using the configuration file ``GCN/args/config.json``.
 
-GCN, GAT, and VIB require a specific structure to execute due to the high number of hyperparameters. The model has:
+GAT and VIB require a specific structure to execute due to the high number of hyperparameters. Each model has:
 
 ``*_model.py`` (inner script): Runs the actual analysis.  
-``model_gridsearch.py`` (outer script): Runs a grid search (or a single run) of the inner script. This structure provides an easy wrapper for new users who want to experiment with the hyperparameters without modifying the inner logic.
+``*_gridsearch.py`` (outer script): Runs a grid search (or a single run) of the inner script. This structure provides an easy wrapper for new users who want to experiment with the hyperparameters without modifying the inner logic.
 
 ## Authors
 

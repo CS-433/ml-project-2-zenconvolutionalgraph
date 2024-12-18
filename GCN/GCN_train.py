@@ -1,7 +1,7 @@
 import sys
 import os
 
-os.chdir("/home/zhzhou/GNN_E")
+os.chdir("..")
 print(os.getcwd())
 
 scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), './scripts'))
