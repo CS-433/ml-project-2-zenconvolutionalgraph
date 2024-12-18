@@ -157,6 +157,8 @@ Run the jupyter [notebook](./EDA/1_create_dataset.ipynb) to create a ``.csv`` fi
 
 **Important Notes**: Due to dataset rebalancing and the fact that the fMRI session is longer than the movie duration, some time points will **NOT** need to be predicted. This situation is encoded by assigning a **label of -1** to these points. Be careful when proceeding with the analysis. All scripts for different machine learning methods start their analysis from the CSV file obtained in this step.
 
+**Note**: to create the preprocessed data it will take around **1h.**
+
 ## Reproduce Results
 
 Three different modalities can be used to replicate the analysis:
@@ -171,6 +173,7 @@ Three different modalities can be used to replicate the analysis:
 
 **Note**: remember before running the scripts, to ask permission to download the dataset and preprocess it as described in points above.
 
+**Note**: run.py takes around **30 min** to run, as the graphs are created in-time (host lab limited us on the datastorage limit for the project).
 
 ## Interpretation
 As an important part of the study is to learn the hidden representation of emotions as networks inside the brain, significant attention was given to **how to interpret the results of the GSL method**. Using the [notebook](GAT/plot_attention_weights.ipynb), it is possible to visualize the attention values and thus the latent connections built by the GAT model. Using the [notebook](VIB/interpretation_VIB.ipynb), it is possible to observe the average graph lengths for each emotion using the VIB method.
