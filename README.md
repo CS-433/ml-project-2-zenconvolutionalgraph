@@ -20,7 +20,7 @@ This repository provides the codebase for implementing and evaluating these meth
 
 The pipeline of our project is shown as follows:
 
-![pipeline](frmi_pipeline.png)
+![pipeline](data/assets/frmi_pipeline.png)
 
 
 ## Project Structure
@@ -33,45 +33,46 @@ Here is an overview of the repository organization of the project:
 ├── requirements.txt
 ├── utils_models.py
 ├── run.py
-├── .gitignore
-├── EDA
-│   ├── 0_explore_dataset.ipynb
-│   └── 1_create_dataset.ipynb
-├── KNN
-│   └── KNN1.ipynb
-├── RF
-│   └── RandomForest.ipynb
-├── FNN
-│   ├── FNN_model.py
-│   ├── FNN_train.ipynb
-├── GCN
-│   ├── args
-│   │   └── config.json
-│   ├── GCN_models.py
-│   ├── GCN.py
-│   ├── GCN_train.py
-│   ├── GNN.ipynb
-├── GAT
-│   ├── GAT_gridsearch.py
-│   ├── GAT_model.py
-│   ├── GAT_train.py
-├── VIB
-│   ├── backbone.py
-│   ├── gsl.py
-│   ├── interpretation_VIB.ipynb
-│   ├── layers.py
-│   ├── train_eval.py
-│   ├── utils.py
-│   ├── VIB_gridsearch_outer.py
-│   ├── VIB.ipynb
-│   └── VIB_train.py
-└── data
+├── data
 │   ├── assets
+│   │   ├── frmi_pipeline.png
+│   │   └── Screencast from 2024-11-17 19-25-59.mp4
 │   ├── processed
 │   ├── raw
 │   │   ├── FN_raw
 │   │   ├── labels
 │   │   └── movies
+│   └── results
+├── EDA
+│   ├── 0_explore_dataset.ipynb
+│   └── 1_create_dataset.ipynb
+├── FNN
+│   ├── FNN_model.py
+│   └── FNN_train.ipynb
+├── GAT
+│   ├── GAT_gridsearch.py
+│   ├── GAT_model.py
+│   ├── GAT_train.py
+│   └── plot_attention_weights.ipynb
+├── GCN
+│   ├── args
+│   │   └── config.json
+│   ├── GCN_models.py
+│   └── GCN_train.py
+├── KNN
+│   └── KNN.ipynb
+├── RF
+│   └── RandomForest.ipynb
+└── VIB
+    ├── backbone.py
+    ├── gsl.py
+    ├── interpretation_VIB.ipynb
+    ├── layers.py
+    ├── train_eval.py
+    ├── utils.py
+    ├── VIB_gridsearch_outer.py
+    ├── VIB.ipynb
+    └── VIB_train.py
 
 ```
 
