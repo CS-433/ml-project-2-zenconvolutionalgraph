@@ -3,6 +3,7 @@ import json
 import numpy as np
 from math import ceil
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
 
 print(os.getcwd())
 
@@ -128,6 +129,7 @@ def main():
     pred_y_test = GAT_eval(MyGat, loader_test) #predocted 
     y_test = [g.y.item() for g in graphs_list_test] #true labels
     accuracy = accuracy_score(y_test, pred_y_test)
+    f1 = f1_score(y_test, pred_y_test, average="weighted")
 
 
     ################################
@@ -137,6 +139,7 @@ def main():
     par_dict.update(
         {
             "test_accuracy": accuracy,
+            "test_f1": f1,
             "pred_y_test": pred_y_test,
             "y_test": y_test,
         }
