@@ -4,6 +4,8 @@ old
 old/*
 data/assets/*
 data/processed/*
+data/results/*
+data/raw/*
 data/results/VIB/*
 data/results/GAT/*
 data/results/GCN/*
