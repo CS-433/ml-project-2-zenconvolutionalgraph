@@ -118,7 +118,7 @@ The multimodal dataset Emo-filM is firstly released in the paper [**Emo-FilM: A 
 data
 ├── assets
 ├── processed
-│   └── all_movies_labelled_13_single.csv
+│   └── all_movies_labelled_13_single_balanced.csv
 ├── raw
 │   ├── FN_raw
 │   │   ├── FN_Vis.csv
@@ -132,6 +132,8 @@ data
 │       ├── ..._compiled414.csv
 └── results
 ```
+
+**ATTENTION**: If you want to execute **only** the `run.py` script (i.e., predict using the best GAT model), you can download a preprocessed version of the dataset from [here](https://drive.google.com/file/d/1cFkVn8K0uUbEPtb8Zznzm7st18MhsDxg/view?usp=drive_link). Ensure that the downloaded file is saved as `./data/processed/all_movies_labelled_13_single_balanced.csv`.
 
 
 
@@ -170,9 +172,19 @@ Three different modalities can be used to replicate the analysis:
     - ``*_model.py`` (inner script): contain the class and useful function for that model.
     - ``*_train.py`` (inner script): Runs the actual analysis and train the model (in invoked by gridsearch scirpt.)
 
-3. **Run.py**: Script to reproduce the results of our best GAT model on the training set. Even if KNN achieved the best overall accuracy (~9%), we decided to report GAT first because it is more complex and was the GSL method that obtained better results. 
+3. **Run.py**: This script reproduces the results of our best GAT model on the training set. While KNN achieved the best overall accuracy (~9%), we decided to highlight GAT first due to its complexity and because it is the GSL method that achieved better results.
 
-**Note**: remember before running the scripts, to ask permission to download the dataset and preprocess it as described in points above.
+**Important**: Ensure you download all the necessary data as described in the previous section, or use only the preprocessed dataset `./data/processed/all_movies_labelled_13_single_balanced.csv`. To run the script, use:
+
+```
+python3 run.py
+```
+
+**Note**: You can run run.py without additional arguments, or customize its behavior by providing the following options:
+- --dataset_path: Path to the dataset.
+- --FN_dir: Path to the directory where Functional Connectivities are stored.
+- --prediction_path: Path to save the final predictions.
+- --model_path: Path to the trained model.
 
 **Note**: run.py takes around **30 min** to run, as the graphs are created in-time (host lab limited us on the datastorage limit for the project).
 
