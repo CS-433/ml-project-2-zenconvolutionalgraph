@@ -1,16 +1,15 @@
 import sys
 import os
 
-os.chdir("..")
+
+#os.chdir("..")
 print(os.getcwd())
 
-scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), './scripts'))
+scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 sys.path.append(scripts_path)
-scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), './data'))
+scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 sys.path.append(scripts_path)
-scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
-sys.path.append(scripts_path)
-scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), './GCN'))
+scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../GCN'))
 sys.path.append(scripts_path)
 from utils_models import *
 from GCN_models import *
@@ -37,7 +36,6 @@ from utils_models import *
 from GCN_models import *
 from torch_geometric.loader import DataLoader
 
-
 #### Add arguments about the GCN model
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a GCN model on a cluster")
@@ -58,6 +56,10 @@ def parse_args():
 
 def load_json_config(json_path):
     """Load configuration from a JSON file."""
+    if not os.path.isabs(json_path):
+        json_path = os.path.join(os.getcwd(), json_path)
+
+    print(json_path)
     if not os.path.exists(json_path):
         raise FileNotFoundError(f"JSON configuration file '{json_path}' not found.")
     with open(json_path, 'r') as f:
@@ -82,13 +84,21 @@ def main():
     device = args.device if torch.cuda.is_available() and args.device == 'cuda' else 'cpu'
     print(f"Using device: {device}")
 
+    #add folder to store result
+    root_path = os.path.dirname(os.getcwd())
+    result_folder = os.path.join(root_path,'data/results/GCN')
+    print(f"Result will be stored in {result_folder}")
+
+    if not os.path.exists(result_folder):
+        os.makedirs(result_folder)
+
     # Load dataset
     print("Loading dataset...")
     df = pd.read_csv(args.data_path, index_col=0)
     df_train, df_test = split_train_test_vertically(df)  # Implement this function if not available
 
-    dataset_train = DatasetEmo(df_train, device=device,FN = 'Limbic', initial_adj_method = args.initial_adj_method,node_feat=args.node_feat)
-    dataset_test = DatasetEmo(df_test, device=device,FN = 'Limbic', initial_adj_method = args.initial_adj_method, node_feat=args.node_feat)
+    dataset_train = DatasetEmo_fast(df_train, device=device,FN = 'Limbic', initial_adj_method = args.initial_adj_method,node_feat=args.node_feat)
+    dataset_test = DatasetEmo_fast(df_test, device=device,FN = 'Limbic', initial_adj_method = args.initial_adj_method, node_feat=args.node_feat)
 
     graphs_list_train = dataset_train.get_graphs_list()
     graphs_list_test = dataset_test.get_graphs_list()
@@ -135,14 +145,23 @@ def main():
         train_loader=train_loader,
         test_loader=test_loader,
         device=device,
+        storage_path = args.config.split('.')[0].split('/')[-1],
         num_epochs=args.num_epochs
     )
     print("Training completed!")
 
-    file_name = f'data/results/GCN/GCNModel_{args.config.split('.')[0]}.pth'
-    torch.save(model.state_dict(), file_name)
-    with open(f'data/results/GCN/GCNModel_results_{args.config.split('.')[0]}.pkl','wb') as f:
+    results_path = os.path.join(os.path.dirname(os.getcwd()),f"data/results/GCN/GCNModel_result_{args.config.split('.')[0].split('/')[-1]}.pkl")
+    model_path = os.path.join(os.path.dirname(os.getcwd()),f"data/results/GCN/GCNModel_model_{args.config.split('.')[0].split('/')[-1]}.pkl")
+    with open(results_path,'wb') as f:
         pkl.dump(results_dict,f)
+    with open(model_path,'wb') as f:
+        pkl.dump(model.state_dict(),f)
+    print("Final result is saved")
+    
+    #file_name = f"../data/results/GCN/GCNModel_{args.config.split('.')[0].split('/')[-1]}.pth"
+    #torch.save(model.state_dict(), file_name)
+    #with open(f"../data/results/GCN/GCNModel_results_{args.config.split('.')[0].split('/')[-1]}.pkl",'wb') as f:
+    #    pkl.dump(results_dict,f)
 
 if __name__ == "__main__":
     main()

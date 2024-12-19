@@ -5,6 +5,8 @@ import torch_geometric.nn as pyg_nn
 import torch.nn.functional as F
 from tqdm import tqdm
 import pickle as pkl
+import os
+from sklearn.metrics import f1_score
 class SimpleGCN(nn.Module):
     def __init__(self, input_dim, hidden_dim1, hidden_dim2, output_dim):
         super().__init__()
@@ -39,8 +41,10 @@ class SimpleGCN(nn.Module):
 
 
 def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device, 
+        storage_path,
         num_epochs=10):
     #gc.collect()
+    print(os.path.join(os.path.dirname(os.getcwd()),f'data/results/GCN/GCNModel_result_{storage_path}.pkl'))
     y_test = []
     best_prediction = []
     y_train = []
@@ -152,12 +156,14 @@ def GCN_train(model, optimizer, loss_fn, train_loader, test_loader, device,
         "y_test":torch.cat(y_test).cpu().numpy(),
         "pred_y_train": torch.cat(best_pred_y_train).cpu().numpy(),
         #"pred_y_train": torch.cat(pred_y_train).cpu().numpy(),
-        "y_train": torch.cat(y_train).cpu().numpy()
-
+        "y_train": torch.cat(y_train).cpu().numpy(),
+        "f1score": f1_score(torch.cat(y_test).cpu().numpy(), torch.cat(best_prediction).cpu().numpy(), average='weighted')
         }
-        with open('/home/zhzhou/GNN_E/data/results/GCN/GCNModel_result_all.pkl','wb') as f:
+        results_path = os.path.join(os.path.dirname(os.getcwd()),f'data/results/GCN/GCNModel_result_{storage_path}.pkl')
+        model_path = os.path.join(os.path.dirname(os.getcwd()),f'data/results/GCN/GCNModel_model_{storage_path}.pkl')
+        with open(results_path,'wb') as f:
             pkl.dump(results_dict,f)
-        with open('/home/zhzhou/GNN_E/data/results/GCN/GCNModel_model_all.pkl','wb') as f:
+        with open(model_path,'wb') as f:
             pkl.dump(best_model_state,f)
         print('Result saved!')
     model.load_state_dict(best_model_state)
